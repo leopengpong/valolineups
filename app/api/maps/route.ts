@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { REF_TAGS, revalidateRefTag } from "@/lib/data/reference";
 
 export async function POST(req: Request) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
     .select("id, name, sort_order")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidateRefTag(REF_TAGS.maps);
   return NextResponse.json(data);
 }
 
@@ -41,5 +43,6 @@ export async function PATCH(req: Request) {
     if (error)
       return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  revalidateRefTag(REF_TAGS.maps);
   return NextResponse.json({ ok: true });
 }

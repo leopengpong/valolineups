@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { getServerSupabase } from "@/lib/supabase/server";
 import { LineupForm } from "@/components/lineup-form";
+import {
+  getCachedAgents,
+  getCachedFields,
+  getCachedMaps,
+} from "@/lib/data/reference";
 import { indexBySlug } from "@/lib/slug";
-import type {
-  Agent,
-  FieldDefinition,
-  Map as MapRow,
-  Side,
-} from "@/lib/types";
+import type { Side } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -18,18 +17,14 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
   const side: Side | undefined =
     sp.side === "defense" || sp.side === "attack" ? sp.side : undefined;
 
-  const supabase = getServerSupabase();
-  const [{ data: maps }, { data: agents }, { data: fields }] = await Promise.all([
-    supabase.from("maps").select("id, name, sort_order").order("sort_order"),
-    supabase.from("agents").select("id, name, sort_order").order("sort_order"),
-    supabase
-      .from("field_definitions")
-      .select("id, key, label, input_type, sort_order")
-      .order("sort_order"),
+  const [maps, agents, fields] = await Promise.all([
+    getCachedMaps(),
+    getCachedAgents(),
+    getCachedFields(),
   ]);
 
-  const mapIdx = indexBySlug((maps ?? []) as MapRow[]);
-  const agentIdx = indexBySlug((agents ?? []) as Agent[]);
+  const mapIdx = indexBySlug(maps);
+  const agentIdx = indexBySlug(agents);
   const prefilledMapId = sp.map ? mapIdx.bySlug.get(sp.map)?.id : undefined;
   const prefilledAgentId = sp.agent
     ? agentIdx.bySlug.get(sp.agent)?.id
@@ -47,9 +42,9 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
         </Link>
       </div>
       <LineupForm
-        maps={(maps ?? []) as MapRow[]}
-        agents={(agents ?? []) as Agent[]}
-        fields={(fields ?? []) as FieldDefinition[]}
+        maps={maps}
+        agents={agents}
+        fields={fields}
         prefilledFilters={{ map: prefilledMapId, agent: prefilledAgentId, side }}
       />
     </main>

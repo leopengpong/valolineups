@@ -1,7 +1,32 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { normalizeImages } from "@/lib/lineups";
+import { attachSignedUrls, listLineups, normalizeImages } from "@/lib/lineups";
+import { getCachedAgents, getCachedMaps } from "@/lib/data/reference";
+import { indexBySlug } from "@/lib/slug";
 import type { Side } from "@/lib/types";
+
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const mapSlug = url.searchParams.get("map") ?? "";
+  const agentSlug = url.searchParams.get("agent") ?? "";
+  if (!mapSlug || !agentSlug) {
+    return NextResponse.json({ lineups: [] });
+  }
+
+  const [maps, agents] = await Promise.all([
+    getCachedMaps(),
+    getCachedAgents(),
+  ]);
+  const map = indexBySlug(maps).bySlug.get(mapSlug);
+  const agent = indexBySlug(agents).bySlug.get(agentSlug);
+  if (!map || !agent) return NextResponse.json({ lineups: [] });
+
+  // Return both sides in one request; the client filters by side. One fetch
+  // per (map, agent) covers all subsequent side toggles.
+  const rows = await listLineups({ mapId: map.id, agentId: agent.id });
+  const lineups = await attachSignedUrls(rows);
+  return NextResponse.json({ lineups });
+}
 
 export async function POST(req: Request) {
   let body: unknown;

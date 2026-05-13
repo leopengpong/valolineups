@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -242,6 +243,7 @@ function Chip({
 
 function FieldsSection({ rows }: { rows: FieldDefinition[] }) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const [items, setItems] = useState<FieldDefinition[]>(rows);
   const [lastRows, setLastRows] = useState<FieldDefinition[]>(rows);
   const [newLabel, setNewLabel] = useState("");
@@ -357,6 +359,13 @@ function FieldsSection({ rows }: { rows: FieldDefinition[] }) {
       return { ok: false, error: j.error || `HTTP ${res.status}` };
     }
     setItems((curr) => curr.filter((r) => r.id !== deleteTarget.id));
+    // Field DELETE strips the key from every lineup's custom_fields, so any
+    // cached lineups are now stale.
+    mutate(
+      (key) => Array.isArray(key) && key[0] === "lineups",
+      undefined,
+      { revalidate: true },
+    );
     router.refresh();
     return { ok: true };
   }
