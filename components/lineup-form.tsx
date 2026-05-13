@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,16 @@ export function LineupForm({
   prefilledFilters?: { map?: string; agent?: string; side?: Side };
 }) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const isEdit = Boolean(initial?.id);
+
+  function invalidateLineupCaches() {
+    mutate(
+      (key) => Array.isArray(key) && key[0] === "lineups",
+      undefined,
+      { revalidate: true },
+    );
+  }
 
   const [mapId, setMapId] = useState<string>(
     initial?.mapId ?? prefilledFilters?.map ?? "",
@@ -155,6 +165,7 @@ export function LineupForm({
       if (mapName) sp.set("map", toSlug(mapName));
       if (agentName) sp.set("agent", toSlug(agentName));
       sp.set("side", side);
+      invalidateLineupCaches();
       router.push(`/?${sp.toString()}`);
       router.refresh();
     } catch (err) {
@@ -178,6 +189,7 @@ export function LineupForm({
       if (mapName) sp.set("map", toSlug(mapName));
       if (agentName) sp.set("agent", toSlug(agentName));
       sp.set("side", side);
+      invalidateLineupCaches();
       router.push(`/?${sp.toString()}`);
       router.refresh();
     } catch (err) {

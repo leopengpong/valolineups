@@ -1,26 +1,28 @@
 import Link from "next/link";
-import { getServerSupabase } from "@/lib/supabase/server";
 import { SettingsEditor } from "@/components/settings-editor";
+import {
+  getCachedAgents,
+  getCachedFields,
+  getCachedMaps,
+} from "@/lib/data/reference";
 import type { Agent, FieldDefinition, Map as MapRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const supabase = getServerSupabase();
-  const [mapsRes, agentsRes, fieldsRes] = await Promise.all([
-    supabase.from("maps").select("id, name, sort_order").order("sort_order"),
-    supabase.from("agents").select("id, name, sort_order").order("sort_order"),
-    supabase
-      .from("field_definitions")
-      .select("id, key, label, input_type, sort_order")
-      .order("sort_order"),
-  ]);
-
-  const loadError =
-    mapsRes.error?.message ||
-    agentsRes.error?.message ||
-    fieldsRes.error?.message ||
-    null;
+  let maps: MapRow[] = [];
+  let agents: Agent[] = [];
+  let fields: FieldDefinition[] = [];
+  let loadError: string | null = null;
+  try {
+    [maps, agents, fields] = await Promise.all([
+      getCachedMaps(),
+      getCachedAgents(),
+      getCachedFields(),
+    ]);
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Failed to load settings";
+  }
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
@@ -43,11 +45,7 @@ export default async function SettingsPage() {
           </p>
         </div>
       )}
-      <SettingsEditor
-        maps={(mapsRes.data ?? []) as MapRow[]}
-        agents={(agentsRes.data ?? []) as Agent[]}
-        fields={(fieldsRes.data ?? []) as FieldDefinition[]}
-      />
+      <SettingsEditor maps={maps} agents={agents} fields={fields} />
     </main>
   );
 }

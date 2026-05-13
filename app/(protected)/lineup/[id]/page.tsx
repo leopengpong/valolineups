@@ -2,13 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { attachSignedUrls } from "@/lib/lineups";
+import {
+  getCachedAgents,
+  getCachedFields,
+  getCachedMaps,
+} from "@/lib/data/reference";
 import { LineupForm } from "@/components/lineup-form";
-import type {
-  Agent,
-  FieldDefinition,
-  Lineup,
-  Map as MapRow,
-} from "@/lib/types";
+import type { Lineup } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +18,12 @@ export default async function EditLineupPage({ params }: { params: Params }) {
   const { id } = await params;
   const supabase = getServerSupabase();
 
-  const [{ data: row, error }, { data: maps }, { data: agents }, { data: fields }] =
-    await Promise.all([
-      supabase.from("lineups").select("*").eq("id", id).single(),
-      supabase.from("maps").select("id, name, sort_order").order("sort_order"),
-      supabase.from("agents").select("id, name, sort_order").order("sort_order"),
-      supabase
-        .from("field_definitions")
-        .select("id, key, label, input_type, sort_order")
-        .order("sort_order"),
-    ]);
+  const [{ data: row, error }, maps, agents, fields] = await Promise.all([
+    supabase.from("lineups").select("*").eq("id", id).single(),
+    getCachedMaps(),
+    getCachedAgents(),
+    getCachedFields(),
+  ]);
 
   if (error || !row) notFound();
 
@@ -58,9 +54,9 @@ export default async function EditLineupPage({ params }: { params: Params }) {
         </Link>
       </div>
       <LineupForm
-        maps={(maps ?? []) as MapRow[]}
-        agents={(agents ?? []) as Agent[]}
-        fields={(fields ?? []) as FieldDefinition[]}
+        maps={maps}
+        agents={agents}
+        fields={fields}
         initial={initial}
       />
     </main>
