@@ -2,6 +2,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { attachSignedUrls, listLineups } from "@/lib/lineups";
 import { FilterBar } from "@/components/filter-bar";
 import { LineupCard } from "@/components/lineup-card";
+import { indexBySlug } from "@/lib/slug";
 import type {
   Agent,
   FieldDefinition,
@@ -21,8 +22,6 @@ export default async function CheatSheetPage({
 }) {
   const sp = await searchParams;
   const side: Side = sp.side === "defense" ? "defense" : "attack";
-  const mapId = sp.map || undefined;
-  const agentId = sp.agent || undefined;
 
   const supabase = getServerSupabase();
   const [{ data: maps }, { data: agents }, { data: fields }] = await Promise.all([
@@ -33,6 +32,14 @@ export default async function CheatSheetPage({
       .select("id, key, label, input_type, sort_order")
       .order("sort_order"),
   ]);
+
+  const mapIdx = indexBySlug((maps ?? []) as MapRow[]);
+  const agentIdx = indexBySlug((agents ?? []) as Agent[]);
+  const mapSlug = sp.map && mapIdx.bySlug.has(sp.map) ? sp.map : undefined;
+  const agentSlug =
+    sp.agent && agentIdx.bySlug.has(sp.agent) ? sp.agent : undefined;
+  const mapId = mapSlug ? mapIdx.bySlug.get(mapSlug)!.id : undefined;
+  const agentId = agentSlug ? agentIdx.bySlug.get(agentSlug)!.id : undefined;
 
   const hasFilters = Boolean(mapId && agentId);
   let lineups: Awaited<ReturnType<typeof attachSignedUrls>> = [];
@@ -46,7 +53,7 @@ export default async function CheatSheetPage({
       <FilterBar
         maps={(maps ?? []) as MapRow[]}
         agents={(agents ?? []) as Agent[]}
-        current={{ mapId, agentId, side }}
+        current={{ mapSlug, agentSlug, side }}
       />
       <main className="px-4 py-4">
         {!hasFilters ? (

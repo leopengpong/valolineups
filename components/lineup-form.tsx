@@ -18,6 +18,7 @@ import {
 import { ImageInput, type ImageItem } from "@/components/image-input";
 import { compressImage } from "@/lib/image";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { toSlug } from "@/lib/slug";
 import { STORAGE_BUCKET } from "@/lib/types";
 import type {
   Agent,
@@ -148,9 +149,11 @@ export function LineupForm({
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || "Save failed");
       }
+      const mapName = maps.find((m) => m.id === mapId)?.name;
+      const agentName = agents.find((a) => a.id === agentId)?.name;
       const sp = new URLSearchParams();
-      sp.set("map", mapId);
-      sp.set("agent", agentId);
+      if (mapName) sp.set("map", toSlug(mapName));
+      if (agentName) sp.set("agent", toSlug(agentName));
       sp.set("side", side);
       router.push(`/?${sp.toString()}`);
       router.refresh();
@@ -169,9 +172,11 @@ export function LineupForm({
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Delete failed");
+      const mapName = maps.find((m) => m.id === mapId)?.name;
+      const agentName = agents.find((a) => a.id === agentId)?.name;
       const sp = new URLSearchParams();
-      if (mapId) sp.set("map", mapId);
-      if (agentId) sp.set("agent", agentId);
+      if (mapName) sp.set("map", toSlug(mapName));
+      if (agentName) sp.set("agent", toSlug(agentName));
       sp.set("side", side);
       router.push(`/?${sp.toString()}`);
       router.refresh();
@@ -240,7 +245,11 @@ export function LineupForm({
           {pending ? "Saving…" : isEdit ? "Save" : "Create"}
         </Button>
         <Link
-          href={cheatSheetHref({ mapId, agentId, side })}
+          href={cheatSheetHref({
+            mapName: maps.find((m) => m.id === mapId)?.name,
+            agentName: agents.find((a) => a.id === agentId)?.name,
+            side,
+          })}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
           Cancel
@@ -357,10 +366,14 @@ function SideField({
   );
 }
 
-function cheatSheetHref(f: { mapId: string; agentId: string; side: Side }) {
+function cheatSheetHref(f: {
+  mapName?: string;
+  agentName?: string;
+  side: Side;
+}) {
   const sp = new URLSearchParams();
-  if (f.mapId) sp.set("map", f.mapId);
-  if (f.agentId) sp.set("agent", f.agentId);
+  if (f.mapName) sp.set("map", toSlug(f.mapName));
+  if (f.agentName) sp.set("agent", toSlug(f.agentName));
   sp.set("side", f.side);
   return `/?${sp.toString()}`;
 }

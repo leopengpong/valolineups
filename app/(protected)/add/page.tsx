@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { LineupForm } from "@/components/lineup-form";
+import { indexBySlug } from "@/lib/slug";
 import type {
   Agent,
   FieldDefinition,
@@ -27,6 +28,13 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
       .order("sort_order"),
   ]);
 
+  const mapIdx = indexBySlug((maps ?? []) as MapRow[]);
+  const agentIdx = indexBySlug((agents ?? []) as Agent[]);
+  const prefilledMapId = sp.map ? mapIdx.bySlug.get(sp.map)?.id : undefined;
+  const prefilledAgentId = sp.agent
+    ? agentIdx.bySlug.get(sp.agent)?.id
+    : undefined;
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <div className="mb-4 flex items-baseline justify-between">
@@ -42,7 +50,7 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
         maps={(maps ?? []) as MapRow[]}
         agents={(agents ?? []) as Agent[]}
         fields={(fields ?? []) as FieldDefinition[]}
-        prefilledFilters={{ map: sp.map, agent: sp.agent, side }}
+        prefilledFilters={{ map: prefilledMapId, agent: prefilledAgentId, side }}
       />
     </main>
   );

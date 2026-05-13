@@ -5,9 +5,11 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toSlug } from "@/lib/slug";
 import type { Agent, Map, Side } from "@/lib/types";
 
-const LS_KEY = "valolineups.filters.v1";
+// Bumped from v1 (UUIDs) to v2 (slugs); old values are ignored.
+const LS_KEY = "valolineups.filters.v2";
 
 type Stored = { map?: string; agent?: string; side?: Side };
 
@@ -36,7 +38,7 @@ export function FilterBar({
 }: {
   maps: Map[];
   agents: Agent[];
-  current: { mapId?: string; agentId?: string; side: Side };
+  current: { mapSlug?: string; agentSlug?: string; side: Side };
   showAddLink?: boolean;
 }) {
   const router = useRouter();
@@ -47,8 +49,8 @@ export function FilterBar({
   const updateUrl = useMemo(
     () => (next: Stored) => {
       const merged: Stored = {
-        map: next.map ?? current.mapId,
-        agent: next.agent ?? current.agentId,
+        map: next.map ?? current.mapSlug,
+        agent: next.agent ?? current.agentSlug,
         side: next.side ?? current.side,
       };
       writeStored(merged);
@@ -61,7 +63,7 @@ export function FilterBar({
       else sp.delete("side");
       router.replace(`${pathname}?${sp.toString()}`);
     },
-    [current.mapId, current.agentId, current.side, params, pathname, router],
+    [current.mapSlug, current.agentSlug, current.side, params, pathname, router],
   );
 
   // On first mount: if URL is missing filters but localStorage has them, push
@@ -71,11 +73,11 @@ export function FilterBar({
     hydrated.current = true;
     const stored = readStored();
     const missing =
-      (!current.mapId && stored.map) ||
-      (!current.agentId && stored.agent) ||
+      (!current.mapSlug && stored.map) ||
+      (!current.agentSlug && stored.agent) ||
       (!params.get("side") && stored.side);
     if (missing) updateUrl(stored);
-  }, [current.mapId, current.agentId, params, updateUrl]);
+  }, [current.mapSlug, current.agentSlug, params, updateUrl]);
 
   // `s` toggles side. Ignore when typing in form fields.
   useEffect(() => {
@@ -94,16 +96,16 @@ export function FilterBar({
   return (
     <div className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <NativeSelect
-        value={current.mapId ?? ""}
+        value={current.mapSlug ?? ""}
         onChange={(v) => updateUrl({ map: v || undefined })}
         placeholder="Map"
-        options={maps.map((m) => ({ value: m.id, label: m.name }))}
+        options={maps.map((m) => ({ value: toSlug(m.name), label: m.name }))}
       />
       <NativeSelect
-        value={current.agentId ?? ""}
+        value={current.agentSlug ?? ""}
         onChange={(v) => updateUrl({ agent: v || undefined })}
         placeholder="Agent"
-        options={agents.map((a) => ({ value: a.id, label: a.name }))}
+        options={agents.map((a) => ({ value: toSlug(a.name), label: a.name }))}
       />
 
       <div className="ml-1 inline-flex rounded-lg border border-border bg-background overflow-hidden">
@@ -196,11 +198,11 @@ function SideButton({
 
 function withFilters(
   path: string,
-  f: { mapId?: string; agentId?: string; side: Side },
+  f: { mapSlug?: string; agentSlug?: string; side: Side },
 ) {
   const sp = new URLSearchParams();
-  if (f.mapId) sp.set("map", f.mapId);
-  if (f.agentId) sp.set("agent", f.agentId);
+  if (f.mapSlug) sp.set("map", f.mapSlug);
+  if (f.agentSlug) sp.set("agent", f.agentSlug);
   sp.set("side", f.side);
   return `${path}?${sp.toString()}`;
 }
