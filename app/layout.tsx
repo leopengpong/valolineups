@@ -34,8 +34,14 @@ export default function RootLayout({
       lang="en"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       style={{ colorScheme: "dark" }}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var h=localStorage.getItem("valolineups.image-height");var n=h?Number(h):NaN;if(Number.isFinite(n)&&n>=80&&n<=480){document.documentElement.style.setProperty("--lineup-image-height",n+"px");}}catch(e){}`,
+          }}
+        />
         {children}
       </body>
     </html>

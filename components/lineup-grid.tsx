@@ -56,12 +56,7 @@ export function LineupGrid({
   }
 
   return (
-    <div
-      className="grid gap-4"
-      style={{
-        gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))",
-      }}
-    >
+    <div className="flex flex-wrap gap-4">
       {lineups.map((l) => (
         <LineupCard key={l.id} lineup={l} fields={fields} />
       ))}

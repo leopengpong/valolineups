@@ -17,15 +17,11 @@ export function LineupCard({
   fields: FieldDefinition[];
 }) {
   const [openUrl, setOpenUrl] = useState<string | null>(null);
-  const span = Math.max(1, Math.min(3, lineup.images.length));
   const { primary, secondary } = splitSummary(lineup.custom_fields, fields);
 
   return (
     <>
-      <div
-        className="group rounded-lg border border-border bg-card/40 p-3 transition-colors hover:bg-card/70"
-        style={{ gridColumn: `span ${span}` }}
-      >
+      <div className="group flex min-w-[280px] flex-col rounded-lg border border-border bg-card/40 p-3 transition-colors hover:bg-card/70">
         <Link
           href={`/lineup/${lineup.id}`}
           className="block px-1 pb-2 pt-1 hover:opacity-90"
@@ -61,14 +57,15 @@ export function LineupCard({
           {lineup.images.map((img, i) => (
             <figure
               key={`${img.path}-${i}`}
-              className="relative flex min-w-0 flex-1 flex-col"
+              className="relative flex shrink-0"
+              style={{ height: "var(--lineup-image-height, 200px)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={img.url}
                 alt={img.label || "Lineup image"}
                 loading="lazy"
-                className="aspect-video w-full cursor-zoom-in rounded border border-border/60 object-cover"
+                className="h-full w-auto cursor-zoom-in rounded border border-border/60 object-contain"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

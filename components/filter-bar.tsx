@@ -6,6 +6,8 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toSlug } from "@/lib/slug";
+import { ImageSizeSlider } from "@/components/image-size-slider";
+import type { LineupCounts } from "@/lib/data/reference";
 import type { Agent, Map, Side } from "@/lib/types";
 
 // Bumped from v1 (UUIDs) to v2 (slugs); old values are ignored.
@@ -33,11 +35,13 @@ function writeStored(s: Stored) {
 export function FilterBar({
   maps,
   agents,
+  lineupCounts,
   current,
   showAddLink = true,
 }: {
   maps: Map[];
   agents: Agent[];
+  lineupCounts?: LineupCounts;
   current: { mapSlug?: string; agentSlug?: string; side: Side };
   showAddLink?: boolean;
 }) {
@@ -99,13 +103,21 @@ export function FilterBar({
         value={current.mapSlug ?? ""}
         onChange={(v) => updateUrl({ map: v || undefined })}
         placeholder="Map"
-        options={maps.map((m) => ({ value: toSlug(m.name), label: m.name }))}
+        options={maps.map((m) => ({
+          value: toSlug(m.name),
+          label: m.name,
+          count: lineupCounts?.byMapId[m.id],
+        }))}
       />
       <NativeSelect
         value={current.agentSlug ?? ""}
         onChange={(v) => updateUrl({ agent: v || undefined })}
         placeholder="Agent"
-        options={agents.map((a) => ({ value: toSlug(a.name), label: a.name }))}
+        options={agents.map((a) => ({
+          value: toSlug(a.name),
+          label: a.name,
+          count: lineupCounts?.byAgentId[a.id],
+        }))}
       />
 
       <div className="ml-1 inline-flex rounded-lg border border-border bg-background overflow-hidden">
@@ -120,6 +132,8 @@ export function FilterBar({
           label="Defense"
         />
       </div>
+
+      <ImageSizeSlider />
 
       <span className="ml-auto flex items-center gap-2">
         {showAddLink && (
@@ -150,7 +164,7 @@ function NativeSelect({
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: string; label: string; count?: number }>;
 }) {
   return (
     <select
@@ -163,7 +177,7 @@ function NativeSelect({
       </option>
       {options.map((o) => (
         <option key={o.value} value={o.value}>
-          {o.label}
+          {o.count ? `${o.label} (${o.count})` : o.label}
         </option>
       ))}
     </select>

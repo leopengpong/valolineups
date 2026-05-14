@@ -7,7 +7,13 @@ export const REF_TAGS = {
   maps: "ref:maps",
   agents: "ref:agents",
   fields: "ref:fields",
+  lineupCounts: "ref:lineup-counts",
 } as const;
+
+export type LineupCounts = {
+  byMapId: Record<string, number>;
+  byAgentId: Record<string, number>;
+};
 
 // Next.js 16 requires a profile argument; { expire: 0 } means "purge now and
 // mark the path as fully revalidated" (the route-handler analogue of the old
@@ -56,4 +62,26 @@ export const getCachedFields = unstable_cache(
   },
   ["ref:fields"],
   { tags: [REF_TAGS.fields] },
+);
+
+export const getCachedLineupCounts = unstable_cache(
+  async (): Promise<LineupCounts> => {
+    const supabase = getServerSupabase();
+    const { data, error } = await supabase
+      .from("lineups")
+      .select("map_id, agent_id");
+    if (error) throw new Error(error.message);
+    const byMapId: Record<string, number> = {};
+    const byAgentId: Record<string, number> = {};
+    for (const row of (data ?? []) as Array<{
+      map_id: string;
+      agent_id: string;
+    }>) {
+      byMapId[row.map_id] = (byMapId[row.map_id] ?? 0) + 1;
+      byAgentId[row.agent_id] = (byAgentId[row.agent_id] ?? 0) + 1;
+    }
+    return { byMapId, byAgentId };
+  },
+  ["ref:lineup-counts"],
+  { tags: [REF_TAGS.lineupCounts] },
 );
