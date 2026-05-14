@@ -8,7 +8,6 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const update: Record<string, unknown> = {};
   if (typeof b?.name === "string" && b.name.trim()) update.name = b.name.trim();
-  if (typeof b?.sort_order === "number") update.sort_order = b.sort_order;
   if (Object.keys(update).length === 0)
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
 

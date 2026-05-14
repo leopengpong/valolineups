@@ -12,8 +12,8 @@ export async function listMaps(): Promise<MapRow[]> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("maps")
-    .select("id, name, sort_order, in_competitive_rotation")
-    .order("sort_order");
+    .select("id, name, in_competitive_rotation")
+    .order("name");
   if (error) throw new Error(error.message);
   return (data ?? []) as MapRow[];
 }
@@ -22,8 +22,8 @@ export async function listAgents(): Promise<Agent[]> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("agents")
-    .select("id, name, sort_order")
-    .order("sort_order");
+    .select("id, name")
+    .order("name");
   if (error) throw new Error(error.message);
   return (data ?? []) as Agent[];
 }

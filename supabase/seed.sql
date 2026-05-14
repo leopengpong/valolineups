@@ -2,50 +2,50 @@
 -- Idempotent. Safe to re-run; existing rows by name/key are left alone.
 
 -- Maps (current + past competitive pool; edit in /settings as needed).
-insert into maps (name, sort_order) values
-  ('Ascent', 10),
-  ('Bind', 20),
-  ('Breeze', 30),
-  ('Fracture', 40),
-  ('Haven', 50),
-  ('Icebox', 60),
-  ('Lotus', 70),
-  ('Pearl', 80),
-  ('Split', 90),
-  ('Sunset', 100),
-  ('Abyss', 110),
-  ('Corrode', 120)
+insert into maps (name) values
+  ('Ascent'),
+  ('Bind'),
+  ('Breeze'),
+  ('Fracture'),
+  ('Haven'),
+  ('Icebox'),
+  ('Lotus'),
+  ('Pearl'),
+  ('Split'),
+  ('Sunset'),
+  ('Abyss'),
+  ('Corrode')
 on conflict (name) do nothing;
 
 -- Agents (full roster; edit in /settings as needed).
-insert into agents (name, sort_order) values
-  ('Astra', 10),
-  ('Breach', 20),
-  ('Brimstone', 30),
-  ('Chamber', 40),
-  ('Clove', 50),
-  ('Cypher', 60),
-  ('Deadlock', 70),
-  ('Fade', 80),
-  ('Gekko', 90),
-  ('Harbor', 100),
-  ('Iso', 110),
-  ('Jett', 120),
-  ('KAY/O', 130),
-  ('Killjoy', 140),
-  ('Neon', 150),
-  ('Omen', 160),
-  ('Phoenix', 170),
-  ('Raze', 180),
-  ('Reyna', 190),
-  ('Sage', 200),
-  ('Skye', 210),
-  ('Sova', 220),
-  ('Tejo', 230),
-  ('Viper', 240),
-  ('Vyse', 250),
-  ('Waylay', 260),
-  ('Yoru', 270)
+insert into agents (name) values
+  ('Astra'),
+  ('Breach'),
+  ('Brimstone'),
+  ('Chamber'),
+  ('Clove'),
+  ('Cypher'),
+  ('Deadlock'),
+  ('Fade'),
+  ('Gekko'),
+  ('Harbor'),
+  ('Iso'),
+  ('Jett'),
+  ('KAY/O'),
+  ('Killjoy'),
+  ('Neon'),
+  ('Omen'),
+  ('Phoenix'),
+  ('Raze'),
+  ('Reyna'),
+  ('Sage'),
+  ('Skye'),
+  ('Sova'),
+  ('Tejo'),
+  ('Viper'),
+  ('Vyse'),
+  ('Waylay'),
+  ('Yoru')
 on conflict (name) do nothing;
 
 -- Default custom fields shown on each lineup form.

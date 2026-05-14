@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import type { Agent, Map as MapRow } from "@/lib/types";
 
-type NamedRow = { id: string; name: string; sort_order: number };
+type NamedRow = { id: string; name: string };
+
+function byName(a: NamedRow, b: NamedRow): number {
+  return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+}
 
 export function SettingsEditor({
   maps,
@@ -77,7 +81,7 @@ function ChipsSection({
         return;
       }
       const created = (await res.json()) as NamedRow;
-      setItems((curr) => [...curr, created]);
+      setItems((curr) => [...curr, created].sort(byName));
       setNewName("");
       router.refresh();
     } catch (err) {
@@ -102,7 +106,9 @@ function ChipsSection({
       return j.error || `HTTP ${res.status}`;
     }
     setItems((curr) =>
-      curr.map((r) => (r.id === renameTarget.id ? { ...r, name: trimmed } : r)),
+      curr
+        .map((r) => (r.id === renameTarget.id ? { ...r, name: trimmed } : r))
+        .sort(byName),
     );
     router.refresh();
     return null;

@@ -6,14 +6,12 @@ create extension if not exists "pgcrypto";
 create table if not exists maps (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,
-  sort_order int not null default 0,
   created_at timestamptz default now()
 );
 
 create table if not exists agents (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,
-  sort_order int not null default 0,
   created_at timestamptz default now()
 );
 

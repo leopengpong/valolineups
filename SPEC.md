@@ -34,14 +34,12 @@ A personal cheat-sheet web app for storing Valorant lineups (screenshot pairs/tr
 create table maps (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,
-  sort_order int not null default 0,
   created_at timestamptz default now()
 );
 
 create table agents (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,
-  sort_order int not null default 0,
   created_at timestamptz default now()
 );
 
@@ -130,7 +128,7 @@ Secret key never reaches the browser. Publishable key is fine to expose (it's us
 Three sections on one page.
 
 **Maps**
-- List, drag to reorder (writes `sort_order`), inline rename, add-new input.
+- List sorted alphabetically by `name` (no manual reorder). Inline rename, add-new input.
 - Delete: blocked if any lineup references it. Show usage count and inline message: "Used by 12 lineups — reassign or remove those first."
 
 **Agents**
