@@ -228,22 +228,32 @@ export function LineupForm({
         <div className="space-y-3">
           {fields.map((f) => (
             <div key={f.id}>
-              <Label htmlFor={`f-${f.key}`} className="mb-1 block text-sm">
-                {f.label}
-              </Label>
-              {f.input_type === "textarea" ? (
-                <Textarea
-                  id={`f-${f.key}`}
+              {f.key === "stance" ? (
+                <StanceField
+                  label={f.label}
                   value={customFields[f.key] ?? ""}
-                  onChange={(e) => setCustom(f.key, e.target.value)}
-                  rows={3}
+                  onChange={(v) => setCustom(f.key, v)}
                 />
               ) : (
-                <Input
-                  id={`f-${f.key}`}
-                  value={customFields[f.key] ?? ""}
-                  onChange={(e) => setCustom(f.key, e.target.value)}
-                />
+                <>
+                  <Label htmlFor={`f-${f.key}`} className="mb-1 block text-sm">
+                    {f.label}
+                  </Label>
+                  {f.input_type === "textarea" ? (
+                    <Textarea
+                      id={`f-${f.key}`}
+                      value={customFields[f.key] ?? ""}
+                      onChange={(e) => setCustom(f.key, e.target.value)}
+                      rows={3}
+                    />
+                  ) : (
+                    <Input
+                      id={`f-${f.key}`}
+                      value={customFields[f.key] ?? ""}
+                      onChange={(e) => setCustom(f.key, e.target.value)}
+                    />
+                  )}
+                </>
               )}
             </div>
           ))}
@@ -374,6 +384,77 @@ function SideField({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+const STANCE_PRESETS = [
+  "Standing",
+  "Crouching",
+  "Jumping",
+  "Running",
+  "Run + Jumping",
+];
+
+function StanceField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const isPreset = STANCE_PRESETS.includes(value);
+  const [useCustom, setUseCustom] = useState(!isPreset && value !== "");
+  const [customText, setCustomText] = useState(!isPreset ? value : "");
+
+  const selectValue = useCustom ? "__custom__" : value;
+
+  function handleSelectChange(v: string) {
+    if (v === "__custom__") {
+      setUseCustom(true);
+      onChange(customText);
+    } else {
+      setUseCustom(false);
+      onChange(v);
+    }
+  }
+
+  function handleCustomChange(v: string) {
+    setCustomText(v);
+    onChange(v);
+  }
+
+  return (
+    <div>
+      <Label htmlFor="f-stance" className="mb-1 block text-sm">
+        {label}
+      </Label>
+      <select
+        id="f-stance"
+        value={selectValue}
+        onChange={(e) => handleSelectChange(e.target.value)}
+        className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <option value="" disabled>
+          Pick a stance
+        </option>
+        {STANCE_PRESETS.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+        <option value="__custom__">Custom…</option>
+      </select>
+      {useCustom && (
+        <Input
+          className="mt-2"
+          value={customText}
+          onChange={(e) => handleCustomChange(e.target.value)}
+          placeholder="Enter custom stance"
+        />
+      )}
     </div>
   );
 }
