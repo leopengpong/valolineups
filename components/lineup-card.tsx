@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { EyeOff } from "lucide-react";
 import { ImageOverlay } from "@/components/image-overlay";
 import { useAllLocalZoom } from "@/components/local-zoom-toggle";
+import { hideLineup, unhideLineup } from "@/components/hidden-lineups";
+import { useToast } from "@/components/toast";
 import type { FieldDefinition, LineupImage, LineupWithUrls } from "@/lib/types";
 
 // Halo + drop-shadow that reads on bright AND dark image regions.
@@ -19,14 +22,35 @@ export function LineupCard({
 }) {
   const [openUrl, setOpenUrl] = useState<string | null>(null);
   const allZoom = useAllLocalZoom();
+  const toast = useToast();
   const { primary, secondary } = splitSummary(lineup.custom_fields, fields);
+
+  const onHide = () => {
+    hideLineup(lineup.id);
+    toast.show({
+      message: "Lineup hidden",
+      action: {
+        label: "Undo",
+        onClick: () => unhideLineup(lineup.id),
+      },
+    });
+  };
 
   return (
     <>
-      <div className="group flex min-w-[280px] flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted">
+      <div className="group relative flex min-w-[280px] flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted">
+        <button
+          type="button"
+          onClick={onHide}
+          title="Hide this lineup"
+          aria-label="Hide this lineup"
+          className="absolute right-1.5 top-1.5 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-60 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <EyeOff className="h-4 w-4" aria-hidden />
+        </button>
         <Link
           href={`/lineup/${lineup.id}`}
-          className="block px-1 pb-2 pt-1 hover:opacity-90"
+          className="block pl-1 pr-9 pb-2 pt-1 hover:opacity-90"
           title={[...primary, ...secondary].join(" · ") || "Edit lineup"}
         >
           {primary.length === 0 && secondary.length === 0 ? (

@@ -1,8 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
+import { Eye } from "lucide-react";
 import useSWR from "swr";
 import { LineupCard } from "@/components/lineup-card";
 import { useSide } from "@/components/side-context";
+import { useHiddenLineups, unhideLineups } from "@/components/hidden-lineups";
 import type { FieldDefinition, LineupWithUrls } from "@/lib/types";
 
 type LineupsResponse = { lineups: LineupWithUrls[] };
@@ -23,6 +26,7 @@ export function LineupGrid({
   fields: FieldDefinition[];
 }) {
   const side = useSide();
+  const hidden = useHiddenLineups();
   const url = `/api/lineups?map=${encodeURIComponent(mapSlug)}&agent=${encodeURIComponent(agentSlug)}`;
   // Key excludes side: we fetch both sides at once and filter client-side, so
   // toggling sides never triggers a refetch for a known (map, agent).
@@ -33,6 +37,17 @@ export function LineupGrid({
     () => fetcher(url),
     { keepPreviousData: true },
   );
+
+  const { visible, hiddenIdsInView } = useMemo(() => {
+    const all = (data?.lineups ?? []).filter((l) => l.side === side);
+    const visible: LineupWithUrls[] = [];
+    const hiddenIdsInView: string[] = [];
+    for (const l of all) {
+      if (hidden.has(l.id)) hiddenIdsInView.push(l.id);
+      else visible.push(l);
+    }
+    return { visible, hiddenIdsInView };
+  }, [data?.lineups, side, hidden]);
 
   if (error) {
     return (
@@ -50,16 +65,33 @@ export function LineupGrid({
     );
   }
 
-  const lineups = (data?.lineups ?? []).filter((l) => l.side === side);
-  if (lineups.length === 0) {
-    return <NoLineups />;
-  }
+  const hiddenCount = hiddenIdsInView.length;
 
   return (
-    <div className="flex flex-wrap gap-4">
-      {lineups.map((l) => (
-        <LineupCard key={l.id} lineup={l} fields={fields} />
-      ))}
+    <div className="flex flex-col gap-3">
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => unhideLineups(hiddenIdsInView)}
+          className="inline-flex w-fit items-center gap-1.5 self-start rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <Eye className="h-4 w-4" aria-hidden />
+          Unhide {hiddenCount} hidden lineup{hiddenCount === 1 ? "" : "s"}
+        </button>
+      )}
+      {visible.length === 0 ? (
+        hiddenCount > 0 ? (
+          <AllHidden />
+        ) : (
+          <NoLineups />
+        )
+      ) : (
+        <div className="flex flex-wrap gap-4">
+          {visible.map((l) => (
+            <LineupCard key={l.id} lineup={l} fields={fields} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -69,6 +101,14 @@ function NoLineups() {
     <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
       No lineups for this filter yet. Click <strong>+ Add</strong> in the top
       right.
+    </div>
+  );
+}
+
+function AllHidden() {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+      Every lineup for this filter is hidden.
     </div>
   );
 }
