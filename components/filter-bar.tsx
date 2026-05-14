@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toSlug } from "@/lib/slug";
 import { ImageSizeSlider } from "@/components/image-size-slider";
 import { LocalZoomToggle } from "@/components/local-zoom-toggle";
+import { LineupMatrix } from "@/components/lineup-matrix";
 import type { LineupCounts } from "@/lib/data/reference";
 import type { Agent, Map, Side } from "@/lib/types";
 
@@ -50,6 +57,26 @@ export function FilterBar({
   const pathname = usePathname();
   const params = useSearchParams();
   const hydrated = useRef(false);
+  const [matrixOpen, setMatrixOpen] = useState(false);
+
+  const selectedMap = useMemo(
+    () => maps.find((m) => toSlug(m.name) === current.mapSlug),
+    [maps, current.mapSlug],
+  );
+  const selectedAgent = useMemo(
+    () => agents.find((a) => toSlug(a.name) === current.agentSlug),
+    [agents, current.agentSlug],
+  );
+
+  const sideCounts = useMemo(() => {
+    if (!selectedMap || !selectedAgent || !lineupCounts) return null;
+    return (
+      lineupCounts.byMapAgentSide[selectedMap.id]?.[selectedAgent.id] ?? {
+        attack: 0,
+        defense: 0,
+      }
+    );
+  }, [selectedMap, selectedAgent, lineupCounts]);
 
   const updateUrl = useMemo(
     () => (next: Stored) => {
@@ -98,39 +125,68 @@ export function FilterBar({
     return () => window.removeEventListener("keydown", onKey);
   }, [current.side, updateUrl]);
 
+  const triggerLabel =
+    selectedMap && selectedAgent
+      ? `${selectedMap.name} · ${selectedAgent.name}`
+      : "Pick map & agent";
+
   return (
     <div className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <NativeSelect
-        value={current.mapSlug ?? ""}
-        onChange={(v) => updateUrl({ map: v || undefined })}
-        placeholder="Map"
-        options={maps.map((m) => ({
-          value: toSlug(m.name),
-          label: m.name,
-          count: lineupCounts?.byMapId[m.id],
-        }))}
-      />
-      <NativeSelect
-        value={current.agentSlug ?? ""}
-        onChange={(v) => updateUrl({ agent: v || undefined })}
-        placeholder="Agent"
-        options={agents.map((a) => ({
-          value: toSlug(a.name),
-          label: a.name,
-          count: lineupCounts?.byAgentId[a.id],
-        }))}
-      />
+      <button
+        type="button"
+        onClick={() => setMatrixOpen(true)}
+        className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <span className={cn(!selectedMap && "text-muted-foreground")}>
+          {triggerLabel}
+        </span>
+        <span aria-hidden className="text-muted-foreground">
+          ▾
+        </span>
+      </button>
+
+      <Dialog open={matrixOpen} onOpenChange={setMatrixOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Pick map & agent</DialogTitle>
+          </DialogHeader>
+          <LineupMatrix
+            maps={maps}
+            agents={agents}
+            lineupCounts={lineupCounts}
+            current={{
+              mapSlug: current.mapSlug,
+              agentSlug: current.agentSlug,
+            }}
+            onSelect={(map, agent) => {
+              setMatrixOpen(false);
+              updateUrl({ map, agent });
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Cell counts are{" "}
+            <span className="text-red-500/80 dark:text-red-400/80">attack</span>
+            {" / "}
+            <span className="text-sky-600/80 dark:text-sky-400/80">
+              defense
+            </span>
+            . Faded columns are maps outside the competitive rotation.
+          </p>
+        </DialogContent>
+      </Dialog>
 
       <div className="ml-1 inline-flex rounded-lg border border-border bg-background overflow-hidden">
         <SideButton
           active={current.side === "attack"}
           onClick={() => updateUrl({ side: "attack" })}
           label="Attack"
+          count={sideCounts?.attack}
         />
         <SideButton
           active={current.side === "defense"}
           onClick={() => updateUrl({ side: "defense" })}
           label="Defense"
+          count={sideCounts?.defense}
         />
       </div>
 
@@ -157,43 +213,16 @@ export function FilterBar({
   );
 }
 
-function NativeSelect({
-  value,
-  onChange,
-  placeholder,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  options: Array<{ value: string; label: string; count?: number }>;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-8 w-36 sm:w-44 rounded-lg border border-border bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-    >
-      <option value="" disabled>
-        {placeholder}
-      </option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.count ? `${o.label} (${o.count})` : o.label}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function SideButton({
   active,
   onClick,
   label,
+  count,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  count?: number;
 }) {
   return (
     <button
@@ -201,13 +230,23 @@ function SideButton({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "px-3 h-8 text-sm transition-colors",
+        "px-3 h-8 text-sm transition-colors tabular-nums",
         active
           ? "bg-primary text-primary-foreground"
           : "bg-background text-foreground hover:bg-muted",
       )}
     >
       {label}
+      {typeof count === "number" && (
+        <span
+          className={cn(
+            "ml-1.5",
+            active ? "text-primary-foreground/70" : "text-muted-foreground",
+          )}
+        >
+          {count}
+        </span>
+      )}
     </button>
   );
 }

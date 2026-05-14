@@ -1,7 +1,7 @@
 import "server-only";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { getServerSupabase } from "@/lib/supabase/server";
-import type { Agent, FieldDefinition, Map as MapRow } from "@/lib/types";
+import type { Agent, FieldDefinition, Map as MapRow, Side } from "@/lib/types";
 
 export const REF_TAGS = {
   maps: "ref:maps",
@@ -10,9 +10,10 @@ export const REF_TAGS = {
   lineupCounts: "ref:lineup-counts",
 } as const;
 
+export type SideCounts = { attack: number; defense: number };
+
 export type LineupCounts = {
-  byMapId: Record<string, number>;
-  byAgentId: Record<string, number>;
+  byMapAgentSide: Record<string, Record<string, SideCounts>>;
 };
 
 // Next.js 16 requires a profile argument; { expire: 0 } means "purge now and
@@ -69,18 +70,19 @@ export const getCachedLineupCounts = unstable_cache(
     const supabase = getServerSupabase();
     const { data, error } = await supabase
       .from("lineups")
-      .select("map_id, agent_id");
+      .select("map_id, agent_id, side");
     if (error) throw new Error(error.message);
-    const byMapId: Record<string, number> = {};
-    const byAgentId: Record<string, number> = {};
+    const byMapAgentSide: Record<string, Record<string, SideCounts>> = {};
     for (const row of (data ?? []) as Array<{
       map_id: string;
       agent_id: string;
+      side: Side;
     }>) {
-      byMapId[row.map_id] = (byMapId[row.map_id] ?? 0) + 1;
-      byAgentId[row.agent_id] = (byAgentId[row.agent_id] ?? 0) + 1;
+      const inner = (byMapAgentSide[row.map_id] ??= {});
+      const cell = (inner[row.agent_id] ??= { attack: 0, defense: 0 });
+      cell[row.side] += 1;
     }
-    return { byMapId, byAgentId };
+    return { byMapAgentSide };
   },
   ["ref:lineup-counts"],
   { tags: [REF_TAGS.lineupCounts] },
