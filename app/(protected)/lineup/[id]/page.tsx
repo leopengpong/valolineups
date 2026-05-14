@@ -2,11 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { attachSignedUrls } from "@/lib/lineups";
-import {
-  getCachedAgents,
-  getCachedFields,
-  getCachedMaps,
-} from "@/lib/data/reference";
+import { listAgents, listFields, listMaps } from "@/lib/data/reference";
 import { LineupForm } from "@/components/lineup-form";
 import type { Lineup } from "@/lib/types";
 
@@ -20,9 +16,9 @@ export default async function EditLineupPage({ params }: { params: Params }) {
 
   const [{ data: row, error }, maps, agents, fields] = await Promise.all([
     supabase.from("lineups").select("*").eq("id", id).single(),
-    getCachedMaps(),
-    getCachedAgents(),
-    getCachedFields(),
+    listMaps(),
+    listAgents(),
+    listFields(),
   ]);
 
   if (error || !row) notFound();

@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { LineupForm } from "@/components/lineup-form";
-import {
-  getCachedAgents,
-  getCachedFields,
-  getCachedMaps,
-} from "@/lib/data/reference";
+import { listAgents, listFields, listMaps } from "@/lib/data/reference";
 import { indexBySlug } from "@/lib/slug";
 import type { Side } from "@/lib/types";
 
@@ -18,9 +14,9 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
     sp.side === "defense" || sp.side === "attack" ? sp.side : undefined;
 
   const [maps, agents, fields] = await Promise.all([
-    getCachedMaps(),
-    getCachedAgents(),
-    getCachedFields(),
+    listMaps(),
+    listAgents(),
+    listFields(),
   ]);
 
   const mapIdx = indexBySlug(maps);

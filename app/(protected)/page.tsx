@@ -1,8 +1,8 @@
 import {
-  getCachedAgents,
-  getCachedFields,
-  getCachedLineupCounts,
-  getCachedMaps,
+  getLineupCounts,
+  listAgents,
+  listFields,
+  listMaps,
 } from "@/lib/data/reference";
 import { FilterBar } from "@/components/filter-bar";
 import { LineupGrid } from "@/components/lineup-grid";
@@ -22,10 +22,10 @@ export default async function CheatSheetPage({
   const side: Side = sp.side === "defense" ? "defense" : "attack";
 
   const [maps, agents, fields, lineupCounts] = await Promise.all([
-    getCachedMaps(),
-    getCachedAgents(),
-    getCachedFields(),
-    getCachedLineupCounts(),
+    listMaps(),
+    listAgents(),
+    listFields(),
+    getLineupCounts(),
   ]);
 
   const mapIdx = indexBySlug(maps);

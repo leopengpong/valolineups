@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { attachSignedUrls, listLineups, normalizeImages } from "@/lib/lineups";
-import {
-  REF_TAGS,
-  getCachedAgents,
-  getCachedMaps,
-  revalidateRefTag,
-} from "@/lib/data/reference";
+import { listAgents, listMaps } from "@/lib/data/reference";
 import { indexBySlug } from "@/lib/slug";
 import type { Side } from "@/lib/types";
 
@@ -18,10 +13,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ lineups: [] });
   }
 
-  const [maps, agents] = await Promise.all([
-    getCachedMaps(),
-    getCachedAgents(),
-  ]);
+  const [maps, agents] = await Promise.all([listMaps(), listAgents()]);
   const map = indexBySlug(maps).bySlug.get(mapSlug);
   const agent = indexBySlug(agents).bySlug.get(agentSlug);
   if (!map || !agent) return NextResponse.json({ lineups: [] });
@@ -80,7 +72,6 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  revalidateRefTag(REF_TAGS.lineupCounts);
   return NextResponse.json({ id: data.id });
 }
 

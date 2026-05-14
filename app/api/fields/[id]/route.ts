@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { REF_TAGS, revalidateRefTag } from "@/lib/data/reference";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -20,7 +19,6 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     .update(update)
     .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  revalidateRefTag(REF_TAGS.fields);
   return NextResponse.json({ ok: true });
 }
 
@@ -69,7 +67,6 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
     .eq("id", id);
   if (delErr)
     return NextResponse.json({ error: delErr.message }, { status: 500 });
-  revalidateRefTag(REF_TAGS.fields);
   return NextResponse.json({ ok: true, stripped: toUpdate.length });
 }
 
