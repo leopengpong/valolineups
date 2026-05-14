@@ -50,15 +50,6 @@ export function FilterBar({
   const params = useSearchParams();
   const hydrated = useRef(false);
 
-  const selectedMapId = useMemo(
-    () => maps.find((m) => toSlug(m.name) === current.mapSlug)?.id,
-    [maps, current.mapSlug],
-  );
-  const selectedAgentId = useMemo(
-    () => agents.find((a) => toSlug(a.name) === current.agentSlug)?.id,
-    [agents, current.agentSlug],
-  );
-
   const updateUrl = useMemo(
     () => (next: Stored) => {
       const merged: Stored = {
@@ -115,9 +106,7 @@ export function FilterBar({
         options={maps.map((m) => ({
           value: toSlug(m.name),
           label: m.name,
-          count: selectedAgentId
-            ? lineupCounts?.byMapAgent[m.id]?.[selectedAgentId]
-            : lineupCounts?.byMapId[m.id],
+          count: lineupCounts?.byMapId[m.id],
         }))}
       />
       <NativeSelect
@@ -127,9 +116,7 @@ export function FilterBar({
         options={agents.map((a) => ({
           value: toSlug(a.name),
           label: a.name,
-          count: selectedMapId
-            ? lineupCounts?.byMapAgent[selectedMapId]?.[a.id]
-            : lineupCounts?.byAgentId[a.id],
+          count: lineupCounts?.byAgentId[a.id],
         }))}
       />
 

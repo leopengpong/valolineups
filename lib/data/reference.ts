@@ -13,7 +13,6 @@ export const REF_TAGS = {
 export type LineupCounts = {
   byMapId: Record<string, number>;
   byAgentId: Record<string, number>;
-  byMapAgent: Record<string, Record<string, number>>;
 };
 
 // Next.js 16 requires a profile argument; { expire: 0 } means "purge now and
@@ -74,17 +73,14 @@ export const getCachedLineupCounts = unstable_cache(
     if (error) throw new Error(error.message);
     const byMapId: Record<string, number> = {};
     const byAgentId: Record<string, number> = {};
-    const byMapAgent: Record<string, Record<string, number>> = {};
     for (const row of (data ?? []) as Array<{
       map_id: string;
       agent_id: string;
     }>) {
       byMapId[row.map_id] = (byMapId[row.map_id] ?? 0) + 1;
       byAgentId[row.agent_id] = (byAgentId[row.agent_id] ?? 0) + 1;
-      const inner = (byMapAgent[row.map_id] ??= {});
-      inner[row.agent_id] = (inner[row.agent_id] ?? 0) + 1;
     }
-    return { byMapId, byAgentId, byMapAgent };
+    return { byMapId, byAgentId };
   },
   ["ref:lineup-counts"],
   { tags: [REF_TAGS.lineupCounts] },
