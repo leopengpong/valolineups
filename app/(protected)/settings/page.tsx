@@ -1,25 +1,16 @@
 import Link from "next/link";
 import { SettingsEditor } from "@/components/settings-editor";
-import {
-  getCachedAgents,
-  getCachedFields,
-  getCachedMaps,
-} from "@/lib/data/reference";
-import type { Agent, FieldDefinition, Map as MapRow } from "@/lib/types";
+import { getCachedAgents, getCachedMaps } from "@/lib/data/reference";
+import type { Agent, Map as MapRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   let maps: MapRow[] = [];
   let agents: Agent[] = [];
-  let fields: FieldDefinition[] = [];
   let loadError: string | null = null;
   try {
-    [maps, agents, fields] = await Promise.all([
-      getCachedMaps(),
-      getCachedAgents(),
-      getCachedFields(),
-    ]);
+    [maps, agents] = await Promise.all([getCachedMaps(), getCachedAgents()]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load settings";
   }
@@ -45,7 +36,7 @@ export default async function SettingsPage() {
           </p>
         </div>
       )}
-      <SettingsEditor maps={maps} agents={agents} fields={fields} />
+      <SettingsEditor maps={maps} agents={agents} />
     </main>
   );
 }
