@@ -27,6 +27,7 @@ export function SettingsEditor({
   return (
     <div className="space-y-10">
       <ChipsSection title="Maps" resource="maps" rows={maps} />
+      <MapRotationSection maps={maps} />
       <ChipsSection title="Agents" resource="agents" rows={agents} />
     </div>
   );

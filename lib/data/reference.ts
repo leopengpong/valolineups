@@ -27,7 +27,7 @@ export const getCachedMaps = unstable_cache(
     const supabase = getServerSupabase();
     const { data, error } = await supabase
       .from("maps")
-      .select("id, name, sort_order")
+      .select("id, name, sort_order, in_competitive_rotation")
       .order("sort_order");
     if (error) throw new Error(error.message);
     return (data ?? []) as MapRow[];

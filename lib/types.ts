@@ -12,6 +12,7 @@ export type Map = {
   id: string;
   name: string;
   sort_order: number;
+  in_competitive_rotation: boolean;
 };
 
 export type Agent = {
