@@ -1,6 +1,7 @@
 import {
   getCachedAgents,
   getCachedFields,
+  getCachedLineupCounts,
   getCachedMaps,
 } from "@/lib/data/reference";
 import { FilterBar } from "@/components/filter-bar";
@@ -20,10 +21,11 @@ export default async function CheatSheetPage({
   const sp = await searchParams;
   const side: Side = sp.side === "defense" ? "defense" : "attack";
 
-  const [maps, agents, fields] = await Promise.all([
+  const [maps, agents, fields, lineupCounts] = await Promise.all([
     getCachedMaps(),
     getCachedAgents(),
     getCachedFields(),
+    getCachedLineupCounts(),
   ]);
 
   const mapIdx = indexBySlug(maps);
@@ -39,6 +41,7 @@ export default async function CheatSheetPage({
       <FilterBar
         maps={maps}
         agents={agents}
+        lineupCounts={lineupCounts}
         current={{ mapSlug, agentSlug, side }}
       />
       <main className="px-4 py-4">

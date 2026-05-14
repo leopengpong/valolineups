@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { deleteStorageObjects, normalizeImages } from "@/lib/lineups";
+import { REF_TAGS, revalidateRefTag } from "@/lib/data/reference";
 import type { Lineup, Side } from "@/lib/types";
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -50,6 +51,13 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   const { error } = await supabase.from("lineups").update(update).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  if (
+    (typeof update.map_id === "string" && update.map_id !== before.map_id) ||
+    (typeof update.agent_id === "string" && update.agent_id !== before.agent_id)
+  ) {
+    revalidateRefTag(REF_TAGS.lineupCounts);
+  }
+
   // Clean up any storage objects that are no longer referenced.
   if (Array.isArray(update.images)) {
     const newPaths = new Set(
@@ -84,6 +92,8 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
 
   const { error } = await supabase.from("lineups").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  revalidateRefTag(REF_TAGS.lineupCounts);
 
   if (paths.length > 0) {
     await deleteStorageObjects(paths).catch(() => undefined);
