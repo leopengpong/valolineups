@@ -15,6 +15,7 @@ import { toSlug } from "@/lib/slug";
 import { ImageSizeSlider } from "@/components/image-size-slider";
 import { LocalZoomToggle } from "@/components/local-zoom-toggle";
 import { LineupMatrix } from "@/components/lineup-matrix";
+import { useSetSide, useSide } from "@/components/side-context";
 import type { LineupCounts } from "@/lib/data/reference";
 import type { Agent, Map, Side } from "@/lib/types";
 
@@ -50,7 +51,7 @@ export function FilterBar({
   maps: Map[];
   agents: Agent[];
   lineupCounts?: LineupCounts;
-  current: { mapSlug?: string; agentSlug?: string; side: Side };
+  current: { mapSlug?: string; agentSlug?: string };
   showAddLink?: boolean;
 }) {
   const router = useRouter();
@@ -58,6 +59,8 @@ export function FilterBar({
   const params = useSearchParams();
   const hydrated = useRef(false);
   const [matrixOpen, setMatrixOpen] = useState(false);
+  const side = useSide();
+  const setSide = useSetSide();
 
   const selectedMap = useMemo(
     () => maps.find((m) => toSlug(m.name) === current.mapSlug),
@@ -78,38 +81,67 @@ export function FilterBar({
     );
   }, [selectedMap, selectedAgent, lineupCounts]);
 
-  const updateUrl = useMemo(
-    () => (next: Stored) => {
-      const merged: Stored = {
-        map: next.map ?? current.mapSlug,
-        agent: next.agent ?? current.agentSlug,
-        side: next.side ?? current.side,
-      };
-      writeStored(merged);
+  // Map/agent changes go through router.replace because they drive the
+  // SWR fetch key and the hasFilters branch on the server page.
+  const updateMapAgent = useMemo(
+    () => (next: { map?: string; agent?: string }) => {
+      const mergedMap = next.map ?? current.mapSlug;
+      const mergedAgent = next.agent ?? current.agentSlug;
+      writeStored({ map: mergedMap, agent: mergedAgent, side });
       const sp = new URLSearchParams(params.toString());
-      if (merged.map) sp.set("map", merged.map);
+      if (mergedMap) sp.set("map", mergedMap);
       else sp.delete("map");
-      if (merged.agent) sp.set("agent", merged.agent);
+      if (mergedAgent) sp.set("agent", mergedAgent);
       else sp.delete("agent");
-      if (merged.side) sp.set("side", merged.side);
-      else sp.delete("side");
+      sp.set("side", side);
       router.replace(`${pathname}?${sp.toString()}`);
     },
-    [current.mapSlug, current.agentSlug, current.side, params, pathname, router],
+    [current.mapSlug, current.agentSlug, side, params, pathname, router],
+  );
+
+  // Side is a client-only memory filter — setSide updates context and the
+  // URL via history.replaceState, never triggering an RSC roundtrip.
+  const updateSide = useMemo(
+    () => (next: Side) => {
+      setSide(next);
+      writeStored({
+        map: current.mapSlug,
+        agent: current.agentSlug,
+        side: next,
+      });
+    },
+    [setSide, current.mapSlug, current.agentSlug],
   );
 
   // On first mount: if URL is missing filters but localStorage has them, push
-  // them into the URL so the server can render.
+  // them in. Map/agent needs router.replace; side uses setSide.
   useEffect(() => {
     if (hydrated.current) return;
     hydrated.current = true;
     const stored = readStored();
-    const missing =
-      (!current.mapSlug && stored.map) ||
-      (!current.agentSlug && stored.agent) ||
-      (!params.get("side") && stored.side);
-    if (missing) updateUrl(stored);
-  }, [current.mapSlug, current.agentSlug, params, updateUrl]);
+    const urlSide = params.get("side");
+    const needsMapAgent =
+      (!current.mapSlug && stored.map) || (!current.agentSlug && stored.agent);
+    if (needsMapAgent) {
+      const sp = new URLSearchParams(params.toString());
+      if (!current.mapSlug && stored.map) sp.set("map", stored.map);
+      if (!current.agentSlug && stored.agent) sp.set("agent", stored.agent);
+      if (!urlSide && stored.side) sp.set("side", stored.side);
+      else sp.set("side", side);
+      router.replace(`${pathname}?${sp.toString()}`);
+    }
+    if (!urlSide && stored.side && stored.side !== side) {
+      setSide(stored.side);
+    }
+  }, [
+    current.mapSlug,
+    current.agentSlug,
+    params,
+    pathname,
+    router,
+    setSide,
+    side,
+  ]);
 
   // `s` toggles side. Ignore when typing in form fields.
   useEffect(() => {
@@ -118,12 +150,11 @@ export function FilterBar({
       const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
       e.preventDefault();
-      const next: Side = current.side === "attack" ? "defense" : "attack";
-      updateUrl({ side: next });
+      updateSide(side === "attack" ? "defense" : "attack");
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [current.side, updateUrl]);
+  }, [side, updateSide]);
 
   const triggerLabel =
     selectedMap && selectedAgent
@@ -160,7 +191,7 @@ export function FilterBar({
             }}
             onSelect={(map, agent) => {
               setMatrixOpen(false);
-              updateUrl({ map, agent });
+              updateMapAgent({ map, agent });
             }}
           />
           <p className="text-xs text-muted-foreground">
@@ -177,14 +208,14 @@ export function FilterBar({
 
       <div className="ml-1 inline-flex rounded-lg border border-border bg-card overflow-hidden">
         <SideButton
-          active={current.side === "attack"}
-          onClick={() => updateUrl({ side: "attack" })}
+          active={side === "attack"}
+          onClick={() => updateSide("attack")}
           label="Attack"
           count={sideCounts?.attack}
         />
         <SideButton
-          active={current.side === "defense"}
-          onClick={() => updateUrl({ side: "defense" })}
+          active={side === "defense"}
+          onClick={() => updateSide("defense")}
           label="Defense"
           count={sideCounts?.defense}
         />
@@ -196,7 +227,7 @@ export function FilterBar({
       <span className="ml-auto flex items-center gap-2">
         {showAddLink && (
           <Link
-            href={withFilters("/add", current)}
+            href={withFilters("/add", { ...current, side })}
             className={buttonVariants({ size: "sm" })}
           >
             + Add

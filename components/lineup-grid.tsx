@@ -2,7 +2,8 @@
 
 import useSWR from "swr";
 import { LineupCard } from "@/components/lineup-card";
-import type { FieldDefinition, LineupWithUrls, Side } from "@/lib/types";
+import { useSide } from "@/components/side-context";
+import type { FieldDefinition, LineupWithUrls } from "@/lib/types";
 
 type LineupsResponse = { lineups: LineupWithUrls[] };
 
@@ -15,14 +16,13 @@ async function fetcher(url: string): Promise<LineupsResponse> {
 export function LineupGrid({
   mapSlug,
   agentSlug,
-  side,
   fields,
 }: {
   mapSlug: string;
   agentSlug: string;
-  side: Side;
   fields: FieldDefinition[];
 }) {
+  const side = useSide();
   const url = `/api/lineups?map=${encodeURIComponent(mapSlug)}&agent=${encodeURIComponent(agentSlug)}`;
   // Key excludes side: we fetch both sides at once and filter client-side, so
   // toggling sides never triggers a refetch for a known (map, agent).

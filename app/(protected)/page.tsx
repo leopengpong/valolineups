@@ -6,6 +6,7 @@ import {
 } from "@/lib/data/reference";
 import { FilterBar } from "@/components/filter-bar";
 import { LineupGrid } from "@/components/lineup-grid";
+import { SideProvider } from "@/components/side-context";
 import { indexBySlug } from "@/lib/slug";
 import type { Side } from "@/lib/types";
 
@@ -19,7 +20,7 @@ export default async function CheatSheetPage({
   searchParams: SP;
 }) {
   const sp = await searchParams;
-  const side: Side = sp.side === "defense" ? "defense" : "attack";
+  const initialSide: Side = sp.side === "defense" ? "defense" : "attack";
 
   const [maps, agents, fields, lineupCounts] = await Promise.all([
     listMaps(),
@@ -37,12 +38,12 @@ export default async function CheatSheetPage({
   const hasFilters = Boolean(mapSlug && agentSlug);
 
   return (
-    <>
+    <SideProvider initialSide={initialSide}>
       <FilterBar
         maps={maps}
         agents={agents}
         lineupCounts={lineupCounts}
-        current={{ mapSlug, agentSlug, side }}
+        current={{ mapSlug, agentSlug }}
       />
       <main className="px-4 py-4">
         {!hasFilters ? (
@@ -51,12 +52,11 @@ export default async function CheatSheetPage({
           <LineupGrid
             mapSlug={mapSlug!}
             agentSlug={agentSlug!}
-            side={side}
             fields={fields}
           />
         )}
       </main>
-    </>
+    </SideProvider>
   );
 }
 
