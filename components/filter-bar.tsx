@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toSlug } from "@/lib/slug";
 import { ImageSizeSlider } from "@/components/image-size-slider";
+import { LocalZoomToggle } from "@/components/local-zoom-toggle";
 import type { LineupCounts } from "@/lib/data/reference";
 import type { Agent, Map, Side } from "@/lib/types";
 
@@ -134,6 +135,7 @@ export function FilterBar({
       </div>
 
       <ImageSizeSlider />
+      <LocalZoomToggle />
 
       <span className="ml-auto flex items-center gap-2">
         {showAddLink && (

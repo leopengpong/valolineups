@@ -55,10 +55,10 @@ export function ImageSizeSlider() {
   return (
     <label
       className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground"
-      title={`Image zoom: ${value}px`}
+      title={`Image size: ${value}px`}
     >
       <span aria-hidden="true" className="leading-none">
-        Image zoom
+        Image size
       </span>
       <input
         type="range"
@@ -67,7 +67,7 @@ export function ImageSizeSlider() {
         step={STEP}
         value={value}
         onChange={(e) => setValue(Number(e.target.value))}
-        aria-label="Image zoom"
+        aria-label="Image size"
         className="h-1 w-24 cursor-pointer accent-primary sm:w-32"
       />
     </label>

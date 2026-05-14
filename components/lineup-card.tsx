@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ImageOverlay } from "@/components/image-overlay";
-import type { FieldDefinition, LineupWithUrls } from "@/lib/types";
+import { useAllLocalZoom } from "@/components/local-zoom-toggle";
+import type { FieldDefinition, LineupImage, LineupWithUrls } from "@/lib/types";
 
 // Halo + drop-shadow that reads on bright AND dark image regions.
 const LABEL_TEXT_SHADOW =
@@ -17,6 +18,7 @@ export function LineupCard({
   fields: FieldDefinition[];
 }) {
   const [openUrl, setOpenUrl] = useState<string | null>(null);
+  const allZoom = useAllLocalZoom();
   const { primary, secondary } = splitSummary(lineup.custom_fields, fields);
 
   return (
@@ -55,32 +57,12 @@ export function LineupCard({
         </Link>
         <div className="flex gap-3">
           {lineup.images.map((img, i) => (
-            <figure
+            <LineupImageItem
               key={`${img.path}-${i}`}
-              className="relative flex shrink-0"
-              style={{ height: "var(--lineup-image-height, 200px)" }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img.url}
-                alt={img.label || "Lineup image"}
-                loading="lazy"
-                className="h-full w-auto cursor-zoom-in rounded border border-border/60 object-contain"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setOpenUrl(img.url);
-                }}
-              />
-              {img.label && (
-                <figcaption
-                  className="pointer-events-none absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-md bg-black/55 px-2 py-0.5 text-base font-medium text-white"
-                  style={{ textShadow: LABEL_TEXT_SHADOW }}
-                >
-                  {img.label}
-                </figcaption>
-              )}
-            </figure>
+              image={img}
+              globalZoom={allZoom}
+              onOpenFullscreen={setOpenUrl}
+            />
           ))}
         </div>
       </div>
@@ -88,6 +70,116 @@ export function LineupCard({
         <ImageOverlay src={openUrl} onClose={() => setOpenUrl(null)} />
       )}
     </>
+  );
+}
+
+// Hardcoded local-zoom point. Per-image zoom points become editable in the
+// next feature; until then, every image zooms its dead-center.
+const ZOOM_X = 0.5;
+const ZOOM_Y = 0.5;
+const ZOOM_FACTOR = 2.5;
+
+function LineupImageItem({
+  image,
+  globalZoom,
+  onOpenFullscreen,
+}: {
+  image: LineupImage & { url: string };
+  globalZoom: boolean;
+  onOpenFullscreen: (url: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const showZoom = globalZoom || hovered || pinned;
+  const showPin = hovered || pinned;
+
+  return (
+    <figure
+      className="relative flex shrink-0"
+      style={
+        {
+          height: "var(--lineup-image-height, 200px)",
+          "--lz-radius":
+            "clamp(28px, calc(var(--lineup-image-height, 200px) * 0.3), 110px)",
+        } as React.CSSProperties
+      }
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={image.url}
+        alt={image.label || "Lineup image"}
+        loading="lazy"
+        className="h-full w-auto cursor-zoom-in rounded border border-border/60 object-contain"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenFullscreen(image.url);
+        }}
+      />
+      {showZoom && (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded"
+            style={{
+              clipPath: `circle(var(--lz-radius) at ${ZOOM_X * 100}% ${ZOOM_Y * 100}%)`,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={image.url}
+              alt=""
+              aria-hidden
+              className="object-contain"
+              style={{
+                position: "absolute",
+                left: `${(1 - ZOOM_FACTOR) * ZOOM_X * 100}%`,
+                top: `${(1 - ZOOM_FACTOR) * ZOOM_Y * 100}%`,
+                width: `${ZOOM_FACTOR * 100}%`,
+                height: `${ZOOM_FACTOR * 100}%`,
+                maxWidth: "none",
+                maxHeight: "none",
+              }}
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
+            style={{
+              left: `${ZOOM_X * 100}%`,
+              top: `${ZOOM_Y * 100}%`,
+              transform: "translate(-50%, -50%)",
+              width: "calc(var(--lz-radius) * 2)",
+              height: "calc(var(--lz-radius) * 2)",
+            }}
+          />
+        </>
+      )}
+      {showPin && (
+        <label
+          className="absolute left-2 top-2 inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-black/55 px-2 py-0.5 text-sm font-medium text-white"
+          style={{ textShadow: LABEL_TEXT_SHADOW }}
+          title="Keep the local zoom on for this image"
+        >
+          <input
+            type="checkbox"
+            checked={pinned}
+            onChange={(e) => setPinned(e.target.checked)}
+            className="h-3 w-3 cursor-pointer accent-primary"
+            aria-label="Pin local zoom"
+          />
+          <span>Pin zoom</span>
+        </label>
+      )}
+      {image.label && (
+        <figcaption
+          className="pointer-events-none absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-md bg-black/55 px-2 py-0.5 text-base font-medium text-white"
+          style={{ textShadow: LABEL_TEXT_SHADOW }}
+        >
+          {image.label}
+        </figcaption>
+      )}
+    </figure>
   );
 }
 
