@@ -30,6 +30,7 @@ export function SettingsEditor({
   return (
     <div className="space-y-10">
       <ChipsSection title="Maps" resource="maps" rows={maps} />
+      <MapRotationSection maps={maps} />
       <ChipsSection title="Agents" resource="agents" rows={agents} />
       <FieldsSection rows={fields} />
     </div>
@@ -236,6 +237,172 @@ function Chip({
         ×
       </button>
     </span>
+  );
+}
+
+// ─── Competitive rotation ────────────────────────────────────────────────────
+
+function MapRotationSection({ maps }: { maps: MapRow[] }) {
+  const router = useRouter();
+  const [inRotation, setInRotation] = useState<MapRow[]>(
+    maps.filter((m) => m.in_competitive_rotation),
+  );
+  const [outRotation, setOutRotation] = useState<MapRow[]>(
+    maps.filter((m) => !m.in_competitive_rotation),
+  );
+  const [lastMaps, setLastMaps] = useState(maps);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<"in" | "out" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (maps !== lastMaps) {
+    setLastMaps(maps);
+    setInRotation(maps.filter((m) => m.in_competitive_rotation));
+    setOutRotation(maps.filter((m) => !m.in_competitive_rotation));
+  }
+
+  const isDirty = maps.some((m) => {
+    const nowIn = inRotation.some((r) => r.id === m.id);
+    return nowIn !== m.in_competitive_rotation;
+  });
+
+  function moveTo(id: string, to: "in" | "out") {
+    const map = [...inRotation, ...outRotation].find((m) => m.id === id);
+    if (!map) return;
+    if (to === "in") {
+      setInRotation((curr) =>
+        curr.some((m) => m.id === id) ? curr : [...curr, map],
+      );
+      setOutRotation((curr) => curr.filter((m) => m.id !== id));
+    } else {
+      setOutRotation((curr) =>
+        curr.some((m) => m.id === id) ? curr : [...curr, map],
+      );
+      setInRotation((curr) => curr.filter((m) => m.id !== id));
+    }
+  }
+
+  function handleDrop(to: "in" | "out") {
+    if (dragId) moveTo(dragId, to);
+    setDragId(null);
+    setDragOver(null);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      const changed = maps.filter((m) => {
+        const nowIn = inRotation.some((r) => r.id === m.id);
+        return nowIn !== m.in_competitive_rotation;
+      });
+      for (const m of changed) {
+        const nowIn = inRotation.some((r) => r.id === m.id);
+        const res = await fetch(`/api/maps/${m.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ in_competitive_rotation: nowIn }),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(j.error || `HTTP ${res.status}`);
+          return;
+        }
+      }
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="mb-3 text-base font-semibold">Competitive rotation</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <RotationBucket
+          label="In rotation"
+          items={inRotation}
+          isOver={dragOver === "in"}
+          onDragStart={(id) => setDragId(id)}
+          onDragOver={() => setDragOver("in")}
+          onDragLeave={() => setDragOver(null)}
+          onDrop={() => handleDrop("in")}
+        />
+        <RotationBucket
+          label="Out of rotation"
+          items={outRotation}
+          isOver={dragOver === "out"}
+          onDragStart={(id) => setDragId(id)}
+          onDragOver={() => setDragOver("out")}
+          onDragLeave={() => setDragOver(null)}
+          onDrop={() => handleDrop("out")}
+        />
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <Button type="button" onClick={save} disabled={busy || !isDirty}>
+          {busy ? "Saving…" : "Save rotation"}
+        </Button>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    </section>
+  );
+}
+
+function RotationBucket({
+  label,
+  items,
+  isOver,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  label: string;
+  items: MapRow[];
+  isOver: boolean;
+  onDragStart: (id: string) => void;
+  onDragOver: () => void;
+  onDragLeave: () => void;
+  onDrop: () => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      <div
+        className={[
+          "min-h-16 rounded-lg border p-2 transition-colors",
+          isOver ? "border-primary/60 bg-primary/5" : "border-border bg-card/30",
+        ].join(" ")}
+        onDragOver={(e) => {
+          e.preventDefault();
+          onDragOver();
+        }}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => {
+          e.preventDefault();
+          onDrop();
+        }}
+      >
+        {items.length === 0 ? (
+          <p className="px-1 text-xs text-muted-foreground">Drop maps here</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {items.map((m) => (
+              <li key={m.id}>
+                <span
+                  draggable
+                  onDragStart={() => onDragStart(m.id)}
+                  className="inline-flex cursor-grab select-none items-center rounded-full border border-border bg-background px-3 py-0.5 text-sm active:cursor-grabbing"
+                >
+                  {m.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
 
