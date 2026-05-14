@@ -133,7 +133,7 @@ function ChipsSection({
   return (
     <section>
       <h2 className="mb-3 text-base font-semibold">{title}</h2>
-      <div className="rounded-lg border border-border bg-card/30 p-3">
+      <div className="rounded-lg border border-border bg-card p-3">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">None yet.</p>
         ) : (
@@ -214,7 +214,7 @@ function Chip({
   onDelete: () => void;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background pl-3 pr-1 py-0.5 text-sm">
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted pl-3 pr-1 py-0.5 text-sm">
       <button
         type="button"
         onClick={onRename}
@@ -368,7 +368,7 @@ function RotationBucket({
       <div
         className={[
           "min-h-16 rounded-lg border p-2 transition-colors",
-          isOver ? "border-primary/60 bg-primary/5" : "border-border bg-card/30",
+          isOver ? "border-primary/60 bg-primary/5" : "border-border bg-card",
         ].join(" ")}
         onDragOver={(e) => {
           e.preventDefault();
@@ -389,7 +389,7 @@ function RotationBucket({
                 <span
                   draggable
                   onDragStart={() => onDragStart(m.id)}
-                  className="inline-flex cursor-grab select-none items-center rounded-full border border-border bg-background px-3 py-0.5 text-sm active:cursor-grabbing"
+                  className="inline-flex cursor-grab select-none items-center rounded-full border border-border bg-muted px-3 py-0.5 text-sm active:cursor-grabbing"
                 >
                   {m.name}
                 </span>

@@ -54,7 +54,7 @@ export function ImageSizeSlider() {
 
   return (
     <label
-      className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground"
+      className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-card px-2 text-xs text-muted-foreground"
       title={`Image size: ${value}px`}
     >
       <span aria-hidden="true" className="leading-none">

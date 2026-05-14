@@ -164,7 +164,7 @@ export function ImageInput({
           {value.map((item, i) => (
             <li
               key={`${item.previewUrl}-${i}`}
-              className="overflow-hidden rounded-lg border border-border bg-card/40 p-2"
+              className="overflow-hidden rounded-lg border border-border bg-card p-2"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

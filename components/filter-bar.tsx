@@ -135,7 +135,7 @@ export function FilterBar({
       <button
         type="button"
         onClick={() => setMatrixOpen(true)}
-        className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className={cn(!selectedMap && "text-muted-foreground")}>
           {triggerLabel}
@@ -146,7 +146,7 @@ export function FilterBar({
       </button>
 
       <Dialog open={matrixOpen} onOpenChange={setMatrixOpen}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="w-fit sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Pick map & agent</DialogTitle>
           </DialogHeader>
@@ -170,12 +170,12 @@ export function FilterBar({
             <span className="text-sky-600/80 dark:text-sky-400/80">
               defense
             </span>
-            . Faded columns are maps outside the competitive rotation.
+            .
           </p>
         </DialogContent>
       </Dialog>
 
-      <div className="ml-1 inline-flex rounded-lg border border-border bg-background overflow-hidden">
+      <div className="ml-1 inline-flex rounded-lg border border-border bg-card overflow-hidden">
         <SideButton
           active={current.side === "attack"}
           onClick={() => updateUrl({ side: "attack" })}
@@ -233,7 +233,7 @@ function SideButton({
         "px-3 h-8 text-sm transition-colors tabular-nums",
         active
           ? "bg-primary text-primary-foreground"
-          : "bg-background text-foreground hover:bg-muted",
+          : "bg-card text-foreground hover:bg-muted",
       )}
     >
       {label}

@@ -41,7 +41,7 @@ export function LocalZoomToggle() {
 
   return (
     <label
-      className="inline-flex h-8 cursor-pointer select-none items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground hover:bg-muted"
+      className="inline-flex h-8 cursor-pointer select-none items-center gap-2 rounded-lg border border-border bg-card px-2 text-xs text-muted-foreground hover:bg-muted"
       title="Show the local zoom on every image"
     >
       <input

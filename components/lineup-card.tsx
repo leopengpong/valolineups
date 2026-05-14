@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ImageOverlay } from "@/components/image-overlay";
 import { useAllLocalZoom } from "@/components/local-zoom-toggle";
@@ -23,7 +23,7 @@ export function LineupCard({
 
   return (
     <>
-      <div className="group flex min-w-[280px] flex-col rounded-lg border border-border bg-card/40 p-3 transition-colors hover:bg-card/70">
+      <div className="group flex min-w-[280px] flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted">
         <Link
           href={`/lineup/${lineup.id}`}
           className="block px-1 pb-2 pt-1 hover:opacity-90"
@@ -47,11 +47,11 @@ export function LineupCard({
                   ))}
                 </div>
               )}
-              {secondary.length > 0 && (
-                <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                  {secondary.join(" · ")}
-                </div>
-              )}
+              {/* Always render the secondary line so cards with vs. without
+                  notes align vertically when laid out side-by-side. */}
+              <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                {secondary.length > 0 ? secondary.join(" · ") : " "}
+              </div>
             </>
           )}
         </Link>
@@ -90,8 +90,17 @@ function LineupImageItem({
 }) {
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const showZoom = globalZoom || hovered || pinned;
-  const showPin = hovered || pinned;
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const showZoom = loaded && (globalZoom || hovered || pinned);
+  const showPin = loaded && (hovered || pinned);
+
+  // If the image was already cached, `onLoad` may have fired before this
+  // component mounted — sync the loaded flag on mount so we drop the skeleton.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el?.complete && (el.naturalWidth ?? 0) > 0) setLoaded(true);
+  }, []);
 
   return (
     <figure
@@ -99,6 +108,10 @@ function LineupImageItem({
       style={
         {
           height: "var(--lineup-image-height, 200px)",
+          // Reserve a 16:9 box while loading so cards keep their shape and
+          // images don't pop in. Once loaded the image's natural ratio takes
+          // over.
+          aspectRatio: loaded ? undefined : "16 / 9",
           "--lz-radius":
             "clamp(28px, calc(var(--lineup-image-height, 200px) * 0.3), 110px)",
         } as React.CSSProperties
@@ -106,12 +119,23 @@ function LineupImageItem({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {!loaded && (
+        <div
+          aria-hidden
+          className="absolute inset-0 animate-pulse rounded border border-border/60 bg-muted"
+        />
+      )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={imgRef}
         src={image.url}
         alt={image.label || "Lineup image"}
         loading="lazy"
-        className="h-full w-auto cursor-zoom-in rounded border border-border/60 object-contain"
+        onLoad={() => setLoaded(true)}
+        className={
+          "h-full w-auto cursor-zoom-in rounded border border-border/60 object-contain transition-opacity duration-150 " +
+          (loaded ? "opacity-100" : "opacity-0")
+        }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

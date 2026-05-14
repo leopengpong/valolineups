@@ -341,7 +341,7 @@ function FieldSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-9 w-full rounded-lg border border-border bg-card px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <option value="" disabled>
           {placeholder}
@@ -377,7 +377,7 @@ function SideField({
               "flex-1 text-sm transition-colors " +
               (value === s
                 ? "bg-primary text-primary-foreground"
-                : "bg-background hover:bg-muted")
+                : "bg-card hover:bg-muted")
             }
           >
             {s === "attack" ? "Attack" : "Defense"}
@@ -435,7 +435,7 @@ function StanceField({
         id="f-stance"
         value={selectValue}
         onChange={(e) => handleSelectChange(e.target.value)}
-        className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-9 w-full rounded-lg border border-border bg-card px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <option value="" disabled>
           Pick a stance
