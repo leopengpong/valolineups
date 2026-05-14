@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackButton } from "@/components/back-button";
 import { SettingsEditor } from "@/components/settings-editor";
 import { listAgents, listMaps } from "@/lib/data/reference";
 import type { Agent, Map as MapRow } from "@/lib/types";
@@ -19,12 +19,9 @@ export default async function SettingsPage() {
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <div className="mb-6 flex items-baseline justify-between">
         <h1 className="text-lg font-semibold">Settings</h1>
-        <Link
-          href="/"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Cheat sheet
-        </Link>
+        <BackButton className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+          ← Back
+        </BackButton>
       </div>
       {loadError && (
         <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">

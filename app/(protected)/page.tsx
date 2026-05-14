@@ -8,7 +8,6 @@ import { FilterBar } from "@/components/filter-bar";
 import { LineupGrid } from "@/components/lineup-grid";
 import { SideProvider } from "@/components/side-context";
 import { indexBySlug } from "@/lib/slug";
-import type { Side } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +19,6 @@ export default async function CheatSheetPage({
   searchParams: SP;
 }) {
   const sp = await searchParams;
-  const initialSide: Side = sp.side === "defense" ? "defense" : "attack";
 
   const [maps, agents, fields, lineupCounts] = await Promise.all([
     listMaps(),
@@ -38,7 +36,7 @@ export default async function CheatSheetPage({
   const hasFilters = Boolean(mapSlug && agentSlug);
 
   return (
-    <SideProvider initialSide={initialSide}>
+    <SideProvider>
       <FilterBar
         maps={maps}
         agents={agents}

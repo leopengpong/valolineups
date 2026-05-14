@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { attachSignedUrls } from "@/lib/lineups";
 import { listAgents, listFields, listMaps } from "@/lib/data/reference";
+import { BackButton } from "@/components/back-button";
 import { LineupForm } from "@/components/lineup-form";
 import type { Lineup } from "@/lib/types";
 
@@ -42,12 +42,9 @@ export default async function EditLineupPage({ params }: { params: Params }) {
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-lg font-semibold">Edit lineup</h1>
-        <Link
-          href="/"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Cheat sheet
-        </Link>
+        <BackButton className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+          ← Back
+        </BackButton>
       </div>
       <LineupForm
         maps={maps}

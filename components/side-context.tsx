@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Side } from "@/lib/types";
 
 type Ctx = {
@@ -10,17 +11,19 @@ type Ctx = {
 
 const SideCtx = createContext<Ctx | null>(null);
 
-// Side lives in client state and syncs to `?side=` via history.replaceState.
-// This avoids the RSC roundtrip that router.replace would force on a
-// force-dynamic page, since side is purely a client-side memory filter.
-export function SideProvider({
-  initialSide,
-  children,
-}: {
-  initialSide: Side;
-  children: React.ReactNode;
-}) {
-  const [side, setSideState] = useState<Side>(initialSide);
+function readUrlSide(params: URLSearchParams | null): Side {
+  return params?.get("side") === "defense" ? "defense" : "attack";
+}
+
+// SideProvider seeds its state from `?side=` via useSearchParams instead of a
+// server-passed prop. That matters for back navigation: when setSide does a
+// history.replaceState, Next copies the current entry's cached router tree
+// onto the new history entry — so a prop-driven SideProvider would re-mount
+// from that cached tree with the stale value. Reading the live URL here makes
+// the cheat sheet's fresh mount on back always reflect the URL bar.
+export function SideProvider({ children }: { children: React.ReactNode }) {
+  const params = useSearchParams();
+  const [side, setSideState] = useState<Side>(() => readUrlSide(params));
 
   const setSide = useCallback((next: Side) => {
     setSideState(next);
