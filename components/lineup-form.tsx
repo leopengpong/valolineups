@@ -16,6 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ImageInput, type ImageItem } from "@/components/image-input";
 import { compressImage } from "@/lib/image";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -385,23 +392,30 @@ function FieldSelect({
   options: Array<{ value: string; label: string }>;
   placeholder: string;
 }) {
+  // Use the base-ui Select primitive so the dropdown gets a consistent custom
+  // UI cross-platform — the native <select> falls back to Times New Roman on
+  // Windows. `null` sentinel makes the SelectValue render the placeholder.
+  // `items` is required for SelectValue to render the label of the selected
+  // option instead of its raw value (slug).
   return (
     <div>
       <Label className="mb-1 block text-sm">{label}</Label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-lg border border-border bg-card px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      <Select
+        items={options}
+        value={value || null}
+        onValueChange={(v) => onChange((v as string | null) ?? "")}
       >
-        <option value="" disabled>
-          {placeholder}
-        </option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="!h-9 w-full bg-card">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -552,25 +566,23 @@ function StanceField({
 
   return (
     <div>
-      <Label htmlFor="f-stance" className="mb-1 block text-sm">
-        {label}
-      </Label>
-      <select
-        id="f-stance"
-        value={selectValue}
-        onChange={(e) => handleSelectChange(e.target.value)}
-        className="h-9 w-full rounded-lg border border-border bg-card px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      <Label className="mb-1 block text-sm">{label}</Label>
+      <Select
+        value={selectValue || null}
+        onValueChange={(v) => handleSelectChange((v as string | null) ?? "")}
       >
-        <option value="" disabled>
-          Pick a stance
-        </option>
-        {STANCE_PRESETS.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-        <option value="__custom__">Custom…</option>
-      </select>
+        <SelectTrigger className="!h-9 w-full bg-card">
+          <SelectValue placeholder="Pick a stance" />
+        </SelectTrigger>
+        <SelectContent>
+          {STANCE_PRESETS.map((p) => (
+            <SelectItem key={p} value={p}>
+              {p}
+            </SelectItem>
+          ))}
+          <SelectItem value="__custom__">Custom…</SelectItem>
+        </SelectContent>
+      </Select>
       {useCustom && (
         <Input
           className="mt-2"
