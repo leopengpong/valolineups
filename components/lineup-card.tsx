@@ -21,7 +21,6 @@ export function LineupCard({
   fields: FieldDefinition[];
 }) {
   const [openUrl, setOpenUrl] = useState<string | null>(null);
-  const allZoom = useAllLocalZoom();
   const toast = useToast();
   const { primary, secondary } = splitSummary(lineup.custom_fields, fields);
 
@@ -84,7 +83,6 @@ export function LineupCard({
             <LineupImageItem
               key={`${img.path}-${i}`}
               image={img}
-              globalZoom={allZoom}
               onOpenFullscreen={setOpenUrl}
             />
           ))}
@@ -105,19 +103,29 @@ const ZOOM_FACTOR = 2.5;
 
 function LineupImageItem({
   image,
-  globalZoom,
   onOpenFullscreen,
 }: {
   image: LineupImage & { url: string };
-  globalZoom: boolean;
   onOpenFullscreen: (url: string) => void;
 }) {
+  const bulkPin = useAllLocalZoom();
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
+  const [prevBulkPin, setPrevBulkPin] = useState(bulkPin);
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
-  const showZoom = loaded && (globalZoom || hovered || pinned);
+  const showZoom = loaded && (hovered || pinned);
   const showPin = loaded && (hovered || pinned);
+
+  // The "All zoom circles" checkbox bulk-sets pinned on every mounted image:
+  // toggling it on pins all, toggling off unpins all (wiping any individual
+  // overrides). Individual pin checkboxes still work normally until the next
+  // bulk action. Sync during render rather than in an effect to avoid a
+  // cascading-render warning.
+  if (prevBulkPin !== bulkPin) {
+    setPrevBulkPin(bulkPin);
+    setPinned(bulkPin);
+  }
 
   // If the image was already cached, `onLoad` may have fired before this
   // component mounted — sync the loaded flag on mount so we drop the skeleton.
