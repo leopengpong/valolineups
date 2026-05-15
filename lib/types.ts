@@ -6,6 +6,11 @@ export type LineupImage = {
   path: string; // Supabase Storage object key
   label?: string;
   order: number;
+  // Optional custom local-zoom anchor as percentages of the rendered image
+  // (0 = top/left, 100 = bottom/right). Missing values default to 50/50
+  // (dead center) at read time.
+  zoom_x?: number;
+  zoom_y?: number;
 };
 
 export type Map = {

@@ -77,9 +77,26 @@ export function normalizeImages(images: unknown): LineupImage[] {
         typeof (img as { path?: unknown }).path === "string",
     )
     .slice(0, 3)
-    .map((img, i) => ({
-      path: img.path,
-      label: typeof img.label === "string" ? img.label : undefined,
-      order: typeof img.order === "number" ? img.order : i,
-    }));
+    .map((img, i) => {
+      const out: LineupImage = {
+        path: img.path,
+        label: typeof img.label === "string" ? img.label : undefined,
+        order: typeof img.order === "number" ? img.order : i,
+      };
+      const zx = (img as { zoom_x?: unknown }).zoom_x;
+      const zy = (img as { zoom_y?: unknown }).zoom_y;
+      if (typeof zx === "number" && Number.isFinite(zx)) {
+        out.zoom_x = clamp01_100(zx);
+      }
+      if (typeof zy === "number" && Number.isFinite(zy)) {
+        out.zoom_y = clamp01_100(zy);
+      }
+      return out;
+    });
+}
+
+function clamp01_100(n: number): number {
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+  return n;
 }

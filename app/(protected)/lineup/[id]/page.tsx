@@ -34,12 +34,15 @@ export default async function EditLineupPage({ params }: { params: Params }) {
       existingPath: img.path,
       previewUrl: img.url,
       label: img.label,
+      customZoom: img.zoom_x !== undefined || img.zoom_y !== undefined,
+      zoomX: img.zoom_x,
+      zoomY: img.zoom_y,
     })),
     customFields: withUrls.custom_fields ?? {},
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <main className="mx-auto w-full max-w-4xl px-4 py-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-lg font-semibold">Edit lineup</h1>
         <BackButton className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">

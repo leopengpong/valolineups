@@ -95,10 +95,8 @@ export function LineupCard({
   );
 }
 
-// Hardcoded local-zoom point. Per-image zoom points become editable in the
-// next feature; until then, every image zooms its dead-center.
-const ZOOM_X = 0.5;
-const ZOOM_Y = 0.5;
+// Per-image local-zoom anchor: stored as 0-100 % deltas on the image
+// (`zoom_x` / `zoom_y` in JSONB). Missing values fall back to dead center.
 const ZOOM_FACTOR = 2.5;
 
 function LineupImageItem({
@@ -116,6 +114,8 @@ function LineupImageItem({
   const imgRef = useRef<HTMLImageElement>(null);
   const showZoom = loaded && (hovered || pinned);
   const showPin = loaded && (hovered || pinned);
+  const zoomX = (image.zoom_x ?? 50) / 100;
+  const zoomY = (image.zoom_y ?? 50) / 100;
 
   // The "All zoom circles" checkbox bulk-sets pinned on every mounted image:
   // toggling it on pins all, toggling off unpins all (wiping any individual
@@ -179,7 +179,7 @@ function LineupImageItem({
           <div
             className="pointer-events-none absolute inset-0 overflow-hidden rounded"
             style={{
-              clipPath: `circle(var(--lz-radius) at ${ZOOM_X * 100}% ${ZOOM_Y * 100}%)`,
+              clipPath: `circle(var(--lz-radius) at ${zoomX * 100}% ${zoomY * 100}%)`,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -190,8 +190,8 @@ function LineupImageItem({
               className="object-contain"
               style={{
                 position: "absolute",
-                left: `${(1 - ZOOM_FACTOR) * ZOOM_X * 100}%`,
-                top: `${(1 - ZOOM_FACTOR) * ZOOM_Y * 100}%`,
+                left: `${(1 - ZOOM_FACTOR) * zoomX * 100}%`,
+                top: `${(1 - ZOOM_FACTOR) * zoomY * 100}%`,
                 width: `${ZOOM_FACTOR * 100}%`,
                 height: `${ZOOM_FACTOR * 100}%`,
                 maxWidth: "none",
@@ -202,8 +202,8 @@ function LineupImageItem({
           <div
             className="pointer-events-none absolute rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
             style={{
-              left: `${ZOOM_X * 100}%`,
-              top: `${ZOOM_Y * 100}%`,
+              left: `${zoomX * 100}%`,
+              top: `${zoomY * 100}%`,
               transform: "translate(-50%, -50%)",
               width: "calc(var(--lz-radius) * 2)",
               height: "calc(var(--lz-radius) * 2)",

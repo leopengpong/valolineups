@@ -12,6 +12,12 @@ export type ImageItem = {
   // For existing images already in Storage.
   existingPath?: string;
   label?: string;
+  // Per-image local-zoom anchor. When `customZoom` is true the image saves
+  // its zoom_x/zoom_y; when false it falls back to dead-center (50/50) at
+  // render time.
+  customZoom?: boolean;
+  zoomX?: number; // 0-100
+  zoomY?: number; // 0-100
 };
 
 const MAX_IMAGES = 3;
@@ -114,6 +120,28 @@ export function ImageInput({
     onChange(next);
   }
 
+  function toggleCustomZoom(idx: number, on: boolean) {
+    const next = value.slice();
+    const cur = next[idx];
+    if (on) {
+      next[idx] = {
+        ...cur,
+        customZoom: true,
+        zoomX: cur.zoomX ?? 50,
+        zoomY: cur.zoomY ?? 50,
+      };
+    } else {
+      next[idx] = { ...cur, customZoom: false };
+    }
+    onChange(next);
+  }
+
+  function setZoom(idx: number, x: number, y: number) {
+    const next = value.slice();
+    next[idx] = { ...next[idx], zoomX: x, zoomY: y };
+    onChange(next);
+  }
+
   const dropZoneCls = useMemo(
     () =>
       [
@@ -160,57 +188,231 @@ export function ImageInput({
       )}
 
       {value.length > 0 && (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {value.map((item, i) => (
-            <li
-              key={`${item.previewUrl}-${i}`}
-              className="overflow-hidden rounded-lg border border-border bg-card p-2"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.previewUrl}
-                alt={item.label || `image ${i + 1}`}
-                className="aspect-video w-full rounded object-cover"
-              />
-              <Input
-                value={item.label ?? ""}
-                onChange={(e) => setLabel(i, e.target.value)}
-                placeholder="Label (optional)"
-                className="mt-2 h-7"
-              />
-              <div className="mt-2 flex items-center gap-1 text-xs">
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                >
-                  ←
-                </Button>
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => move(i, 1)}
-                  disabled={i === value.length - 1}
-                >
-                  →
-                </Button>
-                <span className="ml-auto" />
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="destructive"
-                  onClick={() => remove(i)}
-                >
-                  Remove
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="text-xs text-muted-foreground">
+            No custom zoom point = the image zooms its dead center by default.
+          </p>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {value.map((item, i) => (
+              <li
+                key={`${item.previewUrl}-${i}`}
+                className="space-y-2 overflow-hidden rounded-lg border border-border bg-card p-2"
+              >
+                <ZoomPicker
+                  src={item.previewUrl}
+                  alt={item.label || `image ${i + 1}`}
+                  customZoom={item.customZoom ?? false}
+                  zoomX={item.zoomX ?? 50}
+                  zoomY={item.zoomY ?? 50}
+                  onChange={(x, y) => setZoom(i, x, y)}
+                />
+                <Input
+                  value={item.label ?? ""}
+                  onChange={(e) => setLabel(i, e.target.value)}
+                  placeholder="Label (optional)"
+                  className="h-7"
+                />
+                <div className="flex items-center gap-1 text-xs">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                  >
+                    ←
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => move(i, 1)}
+                    disabled={i === value.length - 1}
+                  >
+                    →
+                  </Button>
+                  <label className="ml-3 inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={item.customZoom ?? false}
+                      onChange={(e) => toggleCustomZoom(i, e.target.checked)}
+                      className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                    />
+                    <span>Custom zoom point</span>
+                  </label>
+                  <span className="ml-auto" />
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="destructive"
+                    onClick={() => remove(i)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
+}
+
+// Zoom-factor and indicator radius mirror the cheat-sheet (lineup-card.tsx)
+// so the editor preview matches what users see at render time.
+const ZOOM_FACTOR = 2.5;
+
+function ZoomPicker({
+  src,
+  alt,
+  customZoom,
+  zoomX,
+  zoomY,
+  onChange,
+}: {
+  src: string;
+  alt: string;
+  customZoom: boolean;
+  zoomX: number;
+  zoomY: number;
+  onChange: (x: number, y: number) => void;
+}) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const draggingRef = useRef(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // If the image was already cached, `onLoad` may have fired before this
+  // component mounted — sync the loaded flag on mount so we drop the skeleton.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el?.complete && (el.naturalWidth ?? 0) > 0) setLoaded(true);
+  }, []);
+
+  const updateFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) return;
+      const x = clamp(((clientX - rect.left) / rect.width) * 100);
+      const y = clamp(((clientY - rect.top) / rect.height) * 100);
+      onChange(x, y);
+    },
+    [onChange],
+  );
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!customZoom) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    draggingRef.current = true;
+    updateFromClient(e.clientX, e.clientY);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!customZoom || !draggingRef.current) return;
+    updateFromClient(e.clientX, e.clientY);
+  };
+
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // pointer already released
+    }
+  };
+
+  return (
+    <div
+      ref={wrapperRef}
+      className={
+        "relative select-none touch-none " +
+        (customZoom ? "cursor-crosshair" : "")
+      }
+      style={
+        {
+          // Roughly mirrors the cheat-sheet's `30% of image height` formula:
+          // for a 16:9 image rendered at the wrapper width, height = width *
+          // 9/16, so 30% of height ≈ 17% of width. We push slightly above
+          // that with an 80px floor so the picker feels comfortably draggable
+          // on the smaller single-column phone layout too.
+          "--zoom-picker-radius": "clamp(80px, 18%, 110px)",
+          // Reserve a 16:9 box while loading so cards keep their shape and
+          // images don't pop in. Once loaded the image's natural ratio takes
+          // over.
+          aspectRatio: loaded ? undefined : "16 / 9",
+        } as React.CSSProperties
+      }
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+    >
+      {!loaded && (
+        <div
+          aria-hidden
+          className="absolute inset-0 animate-pulse rounded border border-border/60 bg-muted"
+        />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        draggable={false}
+        onLoad={() => setLoaded(true)}
+        className={
+          "block w-full rounded transition-opacity duration-150 " +
+          (loaded ? "opacity-100" : "opacity-0")
+        }
+      />
+      {customZoom && loaded && (
+        <>
+          {/* Clipped, magnified copy — same math as the cheat-sheet zoom. */}
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded"
+            style={{
+              clipPath: `circle(var(--zoom-picker-radius) at ${zoomX}% ${zoomY}%)`,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="object-contain"
+              style={{
+                position: "absolute",
+                left: `${(1 - ZOOM_FACTOR) * zoomX}%`,
+                top: `${(1 - ZOOM_FACTOR) * zoomY}%`,
+                width: `${ZOOM_FACTOR * 100}%`,
+                height: `${ZOOM_FACTOR * 100}%`,
+                maxWidth: "none",
+                maxHeight: "none",
+              }}
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute rounded-full border-2 border-white/90 shadow-[0_0_10px_rgba(0,0,0,0.55)]"
+            style={{
+              left: `${zoomX}%`,
+              top: `${zoomY}%`,
+              transform: "translate(-50%, -50%)",
+              width: "calc(var(--zoom-picker-radius) * 2)",
+              height: "calc(var(--zoom-picker-radius) * 2)",
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function clamp(n: number): number {
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+  return n;
 }

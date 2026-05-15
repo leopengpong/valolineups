@@ -27,7 +27,7 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
     : undefined;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <main className="mx-auto w-full max-w-4xl px-4 py-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-lg font-semibold">Add lineup</h1>
         <BackButton className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">

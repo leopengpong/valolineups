@@ -84,7 +84,13 @@ export function LineupForm({
   }
 
   async function uploadNewImages(): Promise<
-    Array<{ path: string; label?: string; order: number }>
+    Array<{
+      path: string;
+      label?: string;
+      order: number;
+      zoom_x?: number;
+      zoom_y?: number;
+    }>
   > {
     const newOnes = images
       .map((img, i) => ({ img, i }))
@@ -119,11 +125,24 @@ export function LineupForm({
       uploadedByIndex.set(i, slot.path);
     }
 
-    return images.map((img, i) => ({
-      path: img.existingPath ?? uploadedByIndex.get(i)!,
-      label: img.label?.trim() || undefined,
-      order: i,
-    }));
+    return images.map((img, i) => {
+      const out: {
+        path: string;
+        label?: string;
+        order: number;
+        zoom_x?: number;
+        zoom_y?: number;
+      } = {
+        path: img.existingPath ?? uploadedByIndex.get(i)!,
+        label: img.label?.trim() || undefined,
+        order: i,
+      };
+      if (img.customZoom) {
+        out.zoom_x = img.zoomX ?? 50;
+        out.zoom_y = img.zoomY ?? 50;
+      }
+      return out;
+    });
   }
 
   async function onSubmit(e: React.FormEvent) {
