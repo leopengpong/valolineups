@@ -11,6 +11,12 @@ export type LineupImage = {
   // (dead center) at read time.
   zoom_x?: number;
   zoom_y?: number;
+  // Optional crop rectangle as percentages of the natural image. All four are
+  // present together when set; absence means the full image is shown.
+  crop_x?: number;
+  crop_y?: number;
+  crop_w?: number;
+  crop_h?: number;
 };
 
 export type Map = {

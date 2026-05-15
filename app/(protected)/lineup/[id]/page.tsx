@@ -37,6 +37,15 @@ export default async function EditLineupPage({ params }: { params: Params }) {
       customZoom: img.zoom_x !== undefined || img.zoom_y !== undefined,
       zoomX: img.zoom_x,
       zoomY: img.zoom_y,
+      customCrop:
+        img.crop_x !== undefined &&
+        img.crop_y !== undefined &&
+        img.crop_w !== undefined &&
+        img.crop_h !== undefined,
+      cropX: img.crop_x,
+      cropY: img.crop_y,
+      cropW: img.crop_w,
+      cropH: img.crop_h,
     })),
     customFields: withUrls.custom_fields ?? {},
   };

@@ -90,6 +90,10 @@ export function LineupForm({
       order: number;
       zoom_x?: number;
       zoom_y?: number;
+      crop_x?: number;
+      crop_y?: number;
+      crop_w?: number;
+      crop_h?: number;
     }>
   > {
     const newOnes = images
@@ -132,6 +136,10 @@ export function LineupForm({
         order: number;
         zoom_x?: number;
         zoom_y?: number;
+        crop_x?: number;
+        crop_y?: number;
+        crop_w?: number;
+        crop_h?: number;
       } = {
         path: img.existingPath ?? uploadedByIndex.get(i)!,
         label: img.label?.trim() || undefined,
@@ -140,6 +148,12 @@ export function LineupForm({
       if (img.customZoom) {
         out.zoom_x = img.zoomX ?? 50;
         out.zoom_y = img.zoomY ?? 50;
+      }
+      if (img.customCrop) {
+        out.crop_x = img.cropX ?? 0;
+        out.crop_y = img.cropY ?? 0;
+        out.crop_w = img.cropW ?? 100;
+        out.crop_h = img.cropH ?? 100;
       }
       return out;
     });

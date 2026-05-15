@@ -69,7 +69,7 @@ create index lineups_filter_idx on lineups (map_id, agent_id, side);
 
 **JSONB shapes:**
 
-- `lineups.images`: `Array<{ path: string; label?: string; order: number; zoom_x?: number; zoom_y?: number }>` — 1 to 3 entries. `path` is the Supabase Storage object key. `zoom_x` / `zoom_y` are 0-100 % deltas anchoring the local-zoom indicator on the image (0,0 = top-left, 100,100 = bottom-right); missing values render at dead center (50/50).
+- `lineups.images`: `Array<{ path: string; label?: string; order: number; zoom_x?: number; zoom_y?: number; crop_x?: number; crop_y?: number; crop_w?: number; crop_h?: number }>` — 1 to 3 entries. `path` is the Supabase Storage object key. `zoom_x` / `zoom_y` are 0-100 % deltas anchoring the local-zoom indicator on the image (0,0 = top-left, 100,100 = bottom-right); missing values render at dead center (50/50). `crop_*` are an optional 0-100 % crop rectangle applied when rendering the cheat-sheet card; all four are present together when set, absence means the full image is shown. The editor keeps the zoom anchor inside the crop rectangle.
 - `lineups.custom_fields`: `Record<string, string>` keyed by `field_definitions.key`.
 
 **Seed data:** a one-shot `supabase/seed.sql` populates a starter set of maps, agents, and the three default custom fields (`ability`, `type`, `notes` — `notes` is `textarea`, others `text`). Lists are then editable from `/settings`.

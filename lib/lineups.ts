@@ -91,6 +91,29 @@ export function normalizeImages(images: unknown): LineupImage[] {
       if (typeof zy === "number" && Number.isFinite(zy)) {
         out.zoom_y = clamp01_100(zy);
       }
+      const cx = (img as { crop_x?: unknown }).crop_x;
+      const cy = (img as { crop_y?: unknown }).crop_y;
+      const cw = (img as { crop_w?: unknown }).crop_w;
+      const ch = (img as { crop_h?: unknown }).crop_h;
+      if (
+        typeof cx === "number" &&
+        typeof cy === "number" &&
+        typeof cw === "number" &&
+        typeof ch === "number" &&
+        Number.isFinite(cx) &&
+        Number.isFinite(cy) &&
+        Number.isFinite(cw) &&
+        Number.isFinite(ch) &&
+        cw > 0 &&
+        ch > 0
+      ) {
+        const x = clamp01_100(cx);
+        const y = clamp01_100(cy);
+        out.crop_x = x;
+        out.crop_y = y;
+        out.crop_w = clamp01_100(Math.min(cw, 100 - x));
+        out.crop_h = clamp01_100(Math.min(ch, 100 - y));
+      }
       return out;
     });
 }

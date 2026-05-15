@@ -111,11 +111,29 @@ function LineupImageItem({
   const [pinned, setPinned] = useState(false);
   const [prevBulkPin, setPrevBulkPin] = useState(bulkPin);
   const [loaded, setLoaded] = useState(false);
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const showZoom = loaded && (hovered || pinned);
   const showPin = loaded && (hovered || pinned);
-  const zoomX = (image.zoom_x ?? 50) / 100;
-  const zoomY = (image.zoom_y ?? 50) / 100;
+
+  const isCropped =
+    image.crop_x !== undefined &&
+    image.crop_y !== undefined &&
+    image.crop_w !== undefined &&
+    image.crop_h !== undefined;
+  const cx = isCropped ? image.crop_x! : 0;
+  const cy = isCropped ? image.crop_y! : 0;
+  const cw = isCropped ? image.crop_w! : 100;
+  const ch = isCropped ? image.crop_h! : 100;
+  const zxImg = image.zoom_x ?? 50;
+  const zyImg = image.zoom_y ?? 50;
+  // Zoom point translated into the cropped figure's local coordinate system
+  // (0-100 within the visible crop). Clamped because edits enforce the zoom
+  // center lives inside the crop, but old data may not have been re-saved.
+  const zfx = clamp01_100(((zxImg - cx) / cw) * 100);
+  const zfy = clamp01_100(((zyImg - cy) / ch) * 100);
+  const cropAspect =
+    isCropped && natural ? (natural.w * cw) / (natural.h * ch) : null;
 
   // The "All zoom circles" checkbox bulk-sets pinned on every mounted image:
   // toggling it on pins all, toggling off unpins all (wiping any individual
@@ -131,19 +149,27 @@ function LineupImageItem({
   // component mounted — sync the loaded flag on mount so we drop the skeleton.
   useEffect(() => {
     const el = imgRef.current;
-    if (el?.complete && (el.naturalWidth ?? 0) > 0) setLoaded(true);
+    if (el?.complete && (el.naturalWidth ?? 0) > 0) {
+      setLoaded(true);
+      setNatural({ w: el.naturalWidth, h: el.naturalHeight });
+    }
   }, []);
 
   return (
     <figure
-      className="relative flex shrink-0"
+      className="relative flex shrink-0 overflow-hidden"
       style={
         {
           height: "var(--lineup-image-height, 200px)",
-          // Reserve a 16:9 box while loading so cards keep their shape and
-          // images don't pop in. Once loaded the image's natural ratio takes
-          // over.
-          aspectRatio: loaded ? undefined : "16 / 9",
+          // When cropped, the absolutely-positioned <img> can't size the
+          // figure for us — fix the aspect ratio explicitly once we know the
+          // natural dimensions. Otherwise reserve a 16:9 placeholder while
+          // loading and let the natural image set the final shape.
+          aspectRatio: isCropped
+            ? (cropAspect ?? "16 / 9")
+            : loaded
+              ? undefined
+              : "16 / 9",
           "--lz-radius":
             "clamp(28px, calc(var(--lineup-image-height, 200px) * 0.3), 110px)",
         } as React.CSSProperties
@@ -163,10 +189,29 @@ function LineupImageItem({
         src={image.url}
         alt={image.label || "Lineup image"}
         loading="lazy"
-        onLoad={() => setLoaded(true)}
+        onLoad={(e) => {
+          setLoaded(true);
+          setNatural({
+            w: e.currentTarget.naturalWidth,
+            h: e.currentTarget.naturalHeight,
+          });
+        }}
         className={
-          "h-full w-auto cursor-zoom-in rounded border border-border/60 object-contain transition-opacity duration-150 " +
+          (isCropped ? "absolute " : "h-full w-auto ") +
+          "cursor-zoom-in rounded border border-border/60 object-contain transition-opacity duration-150 " +
           (loaded ? "opacity-100" : "opacity-0")
+        }
+        style={
+          isCropped
+            ? {
+                width: `${10000 / cw}%`,
+                height: `${10000 / ch}%`,
+                left: `${(-cx * 100) / cw}%`,
+                top: `${(-cy * 100) / ch}%`,
+                maxWidth: "none",
+                maxHeight: "none",
+              }
+            : undefined
         }
         onClick={(e) => {
           e.preventDefault();
@@ -175,11 +220,11 @@ function LineupImageItem({
         }}
       />
       {showZoom && (
-        <>
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded">
           <div
-            className="pointer-events-none absolute inset-0 overflow-hidden rounded"
+            className="absolute inset-0"
             style={{
-              clipPath: `circle(var(--lz-radius) at ${zoomX * 100}% ${zoomY * 100}%)`,
+              clipPath: `circle(var(--lz-radius) at ${zfx}% ${zfy}%)`,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -190,26 +235,26 @@ function LineupImageItem({
               className="object-contain"
               style={{
                 position: "absolute",
-                left: `${(1 - ZOOM_FACTOR) * zoomX * 100}%`,
-                top: `${(1 - ZOOM_FACTOR) * zoomY * 100}%`,
-                width: `${ZOOM_FACTOR * 100}%`,
-                height: `${ZOOM_FACTOR * 100}%`,
+                left: `${((zxImg * (1 - ZOOM_FACTOR) - cx) * 100) / cw}%`,
+                top: `${((zyImg * (1 - ZOOM_FACTOR) - cy) * 100) / ch}%`,
+                width: `${(ZOOM_FACTOR * 10000) / cw}%`,
+                height: `${(ZOOM_FACTOR * 10000) / ch}%`,
                 maxWidth: "none",
                 maxHeight: "none",
               }}
             />
           </div>
           <div
-            className="pointer-events-none absolute rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
+            className="absolute rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
             style={{
-              left: `${zoomX * 100}%`,
-              top: `${zoomY * 100}%`,
+              left: `${zfx}%`,
+              top: `${zfy}%`,
               transform: "translate(-50%, -50%)",
               width: "calc(var(--lz-radius) * 2)",
               height: "calc(var(--lz-radius) * 2)",
             }}
           />
-        </>
+        </div>
       )}
       {showPin && (
         <label
@@ -237,6 +282,12 @@ function LineupImageItem({
       )}
     </figure>
   );
+}
+
+function clamp01_100(n: number): number {
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+  return n;
 }
 
 // Featured fields shown in the prominent primary row. Order matters: title
