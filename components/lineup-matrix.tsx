@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { toSlug } from "@/lib/slug";
 import type { LineupCounts, SideCounts } from "@/lib/data/reference";
 import type { Agent, Map as MapRow } from "@/lib/types";
 
@@ -74,26 +73,26 @@ export function LineupMatrix({
   // rotation toggle — toggling rotation shouldn't shuffle the agent list.
   const agentsWithLineups = useMemo(() => {
     if (!lineupCounts) return null;
-    const ids = new Set<string>();
-    for (const mapId of Object.keys(lineupCounts.byMapAgentSide)) {
-      const inner = lineupCounts.byMapAgentSide[mapId];
-      for (const agentId of Object.keys(inner)) {
-        const c = inner[agentId];
-        if (c.attack > 0 || c.defense > 0) ids.add(agentId);
+    const slugs = new Set<string>();
+    for (const mapSlug of Object.keys(lineupCounts.byMapAgentSide)) {
+      const inner = lineupCounts.byMapAgentSide[mapSlug];
+      for (const agentSlug of Object.keys(inner)) {
+        const c = inner[agentSlug];
+        if (c.attack > 0 || c.defense > 0) slugs.add(agentSlug);
       }
     }
-    return ids;
+    return slugs;
   }, [lineupCounts]);
 
   const visibleAgents =
     showEmptyAgents || !agentsWithLineups
       ? agents
-      : agents.filter((a) => agentsWithLineups.has(a.id));
+      : agents.filter((a) => agentsWithLineups.has(a.slug));
 
   function renderMapHeader(m: MapRow, muted: boolean) {
     return (
       <th
-        key={m.id}
+        key={m.slug}
         scope="col"
         className={cn(
           "sticky top-0 z-10 bg-popover px-2 py-2 text-center font-medium border-b border-border whitespace-nowrap",
@@ -150,46 +149,47 @@ export function LineupMatrix({
             </tr>
           </thead>
           <tbody>
-            {visibleAgents.map((a) => {
-              const agentSlug = toSlug(a.name);
-              return (
-                <tr key={a.id} className="border-b border-border last:border-b-0">
-                  <th
-                    scope="row"
-                    className="sticky left-0 z-10 bg-popover px-2 py-1.5 text-left font-medium border-r border-border whitespace-nowrap"
-                  >
-                    {a.name}
-                  </th>
-                  {rotationMaps.map((m) => (
-                    <MatrixCell
-                      key={m.id}
-                      counts={lineupCounts?.byMapAgentSide[m.id]?.[a.id] ?? EMPTY}
-                      selected={
-                        current.mapSlug === toSlug(m.name) &&
-                        current.agentSlug === agentSlug
-                      }
-                      muted={false}
-                      onClick={() => onSelect(toSlug(m.name), agentSlug)}
-                    />
-                  ))}
-                  {visibleOtherMaps.length > 0 && (
-                    <td aria-hidden className="border-l border-border w-2" />
-                  )}
-                  {visibleOtherMaps.map((m) => (
-                    <MatrixCell
-                      key={m.id}
-                      counts={lineupCounts?.byMapAgentSide[m.id]?.[a.id] ?? EMPTY}
-                      selected={
-                        current.mapSlug === toSlug(m.name) &&
-                        current.agentSlug === agentSlug
-                      }
-                      muted={true}
-                      onClick={() => onSelect(toSlug(m.name), agentSlug)}
-                    />
-                  ))}
-                </tr>
-              );
-            })}
+            {visibleAgents.map((a) => (
+              <tr key={a.slug} className="border-b border-border last:border-b-0">
+                <th
+                  scope="row"
+                  className="sticky left-0 z-10 bg-popover px-2 py-1.5 text-left font-medium border-r border-border whitespace-nowrap"
+                >
+                  {a.name}
+                </th>
+                {rotationMaps.map((m) => (
+                  <MatrixCell
+                    key={m.slug}
+                    counts={
+                      lineupCounts?.byMapAgentSide[m.slug]?.[a.slug] ?? EMPTY
+                    }
+                    selected={
+                      current.mapSlug === m.slug &&
+                      current.agentSlug === a.slug
+                    }
+                    muted={false}
+                    onClick={() => onSelect(m.slug, a.slug)}
+                  />
+                ))}
+                {visibleOtherMaps.length > 0 && (
+                  <td aria-hidden className="border-l border-border w-2" />
+                )}
+                {visibleOtherMaps.map((m) => (
+                  <MatrixCell
+                    key={m.slug}
+                    counts={
+                      lineupCounts?.byMapAgentSide[m.slug]?.[a.slug] ?? EMPTY
+                    }
+                    selected={
+                      current.mapSlug === m.slug &&
+                      current.agentSlug === a.slug
+                    }
+                    muted={true}
+                    onClick={() => onSelect(m.slug, a.slug)}
+                  />
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

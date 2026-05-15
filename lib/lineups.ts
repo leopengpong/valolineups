@@ -37,8 +37,8 @@ export async function attachSignedUrls(
 }
 
 export type LineupFilter = {
-  mapId?: string;
-  agentId?: string;
+  mapSlug?: string;
+  agentSlug?: string;
   side?: Side;
 };
 
@@ -50,8 +50,8 @@ export async function listLineups(
     .from("lineups")
     .select("*")
     .order("created_at", { ascending: false });
-  if (filter.mapId) q = q.eq("map_id", filter.mapId);
-  if (filter.agentId) q = q.eq("agent_id", filter.agentId);
+  if (filter.mapSlug) q = q.eq("map_slug", filter.mapSlug);
+  if (filter.agentSlug) q = q.eq("agent_slug", filter.agentSlug);
   if (filter.side) q = q.eq("side", filter.side);
   const { data, error } = await q;
   if (error) throw new Error(error.message);

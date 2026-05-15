@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node asset_updater/sync-reference.mjs --soft-fail",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

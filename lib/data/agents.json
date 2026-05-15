@@ -1,0 +1,640 @@
+[
+  {
+    "slug": "astra",
+    "name": "Astra",
+    "abilities": {
+      "ability1": {
+        "name": "Nova Pulse",
+        "icon": "/agent-abilities/astra-ability1.png"
+      },
+      "ability2": {
+        "name": "Nebula  / Dissipate",
+        "icon": "/agent-abilities/astra-ability2.png"
+      },
+      "ability3": {
+        "name": "Gravity Well",
+        "icon": "/agent-abilities/astra-ability3.png"
+      },
+      "ultimate": {
+        "name": "Astral Form / Cosmic Divide",
+        "icon": "/agent-abilities/astra-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "breach",
+    "name": "Breach",
+    "abilities": {
+      "ability1": {
+        "name": "Flashpoint",
+        "icon": "/agent-abilities/breach-ability1.png"
+      },
+      "ability2": {
+        "name": "Fault Line",
+        "icon": "/agent-abilities/breach-ability2.png"
+      },
+      "ability3": {
+        "name": "Aftershock",
+        "icon": "/agent-abilities/breach-ability3.png"
+      },
+      "ultimate": {
+        "name": "Rolling Thunder",
+        "icon": "/agent-abilities/breach-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "brimstone",
+    "name": "Brimstone",
+    "abilities": {
+      "ability1": {
+        "name": "Incendiary",
+        "icon": "/agent-abilities/brimstone-ability1.png"
+      },
+      "ability2": {
+        "name": "Sky Smoke",
+        "icon": "/agent-abilities/brimstone-ability2.png"
+      },
+      "ability3": {
+        "name": "Stim Beacon",
+        "icon": "/agent-abilities/brimstone-ability3.png"
+      },
+      "ultimate": {
+        "name": "Orbital Strike",
+        "icon": "/agent-abilities/brimstone-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "chamber",
+    "name": "Chamber",
+    "abilities": {
+      "ability1": {
+        "name": "Headhunter",
+        "icon": "/agent-abilities/chamber-ability1.png"
+      },
+      "ability2": {
+        "name": "Rendezvous",
+        "icon": "/agent-abilities/chamber-ability2.png"
+      },
+      "ability3": {
+        "name": "Trademark",
+        "icon": "/agent-abilities/chamber-ability3.png"
+      },
+      "ultimate": {
+        "name": "Tour De Force",
+        "icon": "/agent-abilities/chamber-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "clove",
+    "name": "Clove",
+    "abilities": {
+      "ability1": {
+        "name": "Meddle",
+        "icon": "/agent-abilities/clove-ability1.png"
+      },
+      "ability2": {
+        "name": "Ruse",
+        "icon": "/agent-abilities/clove-ability2.png"
+      },
+      "ability3": {
+        "name": "Pick-me-up",
+        "icon": "/agent-abilities/clove-ability3.png"
+      },
+      "ultimate": {
+        "name": "Not Dead Yet",
+        "icon": "/agent-abilities/clove-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "cypher",
+    "name": "Cypher",
+    "abilities": {
+      "ability1": {
+        "name": "Cyber Cage",
+        "icon": "/agent-abilities/cypher-ability1.png"
+      },
+      "ability2": {
+        "name": "Spycam",
+        "icon": "/agent-abilities/cypher-ability2.png"
+      },
+      "ability3": {
+        "name": "Trapwire",
+        "icon": "/agent-abilities/cypher-ability3.png"
+      },
+      "ultimate": {
+        "name": "Neural Theft",
+        "icon": "/agent-abilities/cypher-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "deadlock",
+    "name": "Deadlock",
+    "abilities": {
+      "ability1": {
+        "name": "Sonic Sensor",
+        "icon": "/agent-abilities/deadlock-ability1.png"
+      },
+      "ability2": {
+        "name": "GravNet",
+        "icon": "/agent-abilities/deadlock-ability2.png"
+      },
+      "ability3": {
+        "name": "Barrier Mesh",
+        "icon": "/agent-abilities/deadlock-ability3.png"
+      },
+      "ultimate": {
+        "name": "Annihilation",
+        "icon": "/agent-abilities/deadlock-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "fade",
+    "name": "Fade",
+    "abilities": {
+      "ability1": {
+        "name": "Seize",
+        "icon": "/agent-abilities/fade-ability1.png"
+      },
+      "ability2": {
+        "name": "Haunt",
+        "icon": "/agent-abilities/fade-ability2.png"
+      },
+      "ability3": {
+        "name": "Prowler",
+        "icon": "/agent-abilities/fade-ability3.png"
+      },
+      "ultimate": {
+        "name": "Nightfall",
+        "icon": "/agent-abilities/fade-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "gekko",
+    "name": "Gekko",
+    "abilities": {
+      "ability1": {
+        "name": "Wingman",
+        "icon": "/agent-abilities/gekko-ability1.png"
+      },
+      "ability2": {
+        "name": "Dizzy",
+        "icon": "/agent-abilities/gekko-ability2.png"
+      },
+      "ability3": {
+        "name": "Mosh Pit",
+        "icon": "/agent-abilities/gekko-ability3.png"
+      },
+      "ultimate": {
+        "name": "Thrash",
+        "icon": "/agent-abilities/gekko-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "harbor",
+    "name": "Harbor",
+    "abilities": {
+      "ability1": {
+        "name": "High Tide",
+        "icon": "/agent-abilities/harbor-ability1.png"
+      },
+      "ability2": {
+        "name": "Cove",
+        "icon": "/agent-abilities/harbor-ability2.png"
+      },
+      "ability3": {
+        "name": "Storm Surge",
+        "icon": "/agent-abilities/harbor-ability3.png"
+      },
+      "ultimate": {
+        "name": "Reckoning",
+        "icon": "/agent-abilities/harbor-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "iso",
+    "name": "Iso",
+    "abilities": {
+      "ability1": {
+        "name": "Undercut",
+        "icon": "/agent-abilities/iso-ability1.png"
+      },
+      "ability2": {
+        "name": "Double Tap",
+        "icon": "/agent-abilities/iso-ability2.png"
+      },
+      "ability3": {
+        "name": "Contingency",
+        "icon": "/agent-abilities/iso-ability3.png"
+      },
+      "ultimate": {
+        "name": "Kill Contract",
+        "icon": "/agent-abilities/iso-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "jett",
+    "name": "Jett",
+    "abilities": {
+      "ability1": {
+        "name": "Updraft",
+        "icon": "/agent-abilities/jett-ability1.png"
+      },
+      "ability2": {
+        "name": "Tailwind",
+        "icon": "/agent-abilities/jett-ability2.png"
+      },
+      "ability3": {
+        "name": "Cloudburst",
+        "icon": "/agent-abilities/jett-ability3.png"
+      },
+      "ultimate": {
+        "name": "Blade Storm",
+        "icon": "/agent-abilities/jett-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "kayo",
+    "name": "KAY/O",
+    "abilities": {
+      "ability1": {
+        "name": "FLASH/drive",
+        "icon": "/agent-abilities/kayo-ability1.png"
+      },
+      "ability2": {
+        "name": "ZERO/point",
+        "icon": "/agent-abilities/kayo-ability2.png"
+      },
+      "ability3": {
+        "name": "FRAG/ment",
+        "icon": "/agent-abilities/kayo-ability3.png"
+      },
+      "ultimate": {
+        "name": "NULL/cmd",
+        "icon": "/agent-abilities/kayo-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "killjoy",
+    "name": "Killjoy",
+    "abilities": {
+      "ability1": {
+        "name": "ALARMBOT",
+        "icon": "/agent-abilities/killjoy-ability1.png"
+      },
+      "ability2": {
+        "name": "TURRET",
+        "icon": "/agent-abilities/killjoy-ability2.png"
+      },
+      "ability3": {
+        "name": "Nanoswarm",
+        "icon": "/agent-abilities/killjoy-ability3.png"
+      },
+      "ultimate": {
+        "name": "Lockdown",
+        "icon": "/agent-abilities/killjoy-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "miks",
+    "name": "Miks",
+    "abilities": {
+      "ability1": {
+        "name": "Harmonize",
+        "icon": "/agent-abilities/miks-ability1.png"
+      },
+      "ability2": {
+        "name": "Waveform",
+        "icon": "/agent-abilities/miks-ability2.png"
+      },
+      "ability3": {
+        "name": "M-pulse",
+        "icon": "/agent-abilities/miks-ability3.png"
+      },
+      "ultimate": {
+        "name": "Bassquake",
+        "icon": "/agent-abilities/miks-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "neon",
+    "name": "Neon",
+    "abilities": {
+      "ability1": {
+        "name": "Relay Bolt",
+        "icon": "/agent-abilities/neon-ability1.png"
+      },
+      "ability2": {
+        "name": "High Gear",
+        "icon": "/agent-abilities/neon-ability2.png"
+      },
+      "ability3": {
+        "name": "Fast Lane",
+        "icon": "/agent-abilities/neon-ability3.png"
+      },
+      "ultimate": {
+        "name": "Overdrive",
+        "icon": "/agent-abilities/neon-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "omen",
+    "name": "Omen",
+    "abilities": {
+      "ability1": {
+        "name": "Paranoia",
+        "icon": "/agent-abilities/omen-ability1.png"
+      },
+      "ability2": {
+        "name": "Dark Cover",
+        "icon": "/agent-abilities/omen-ability2.png"
+      },
+      "ability3": {
+        "name": "Shrouded Step",
+        "icon": "/agent-abilities/omen-ability3.png"
+      },
+      "ultimate": {
+        "name": "From the Shadows",
+        "icon": "/agent-abilities/omen-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "phoenix",
+    "name": "Phoenix",
+    "abilities": {
+      "ability1": {
+        "name": "Hot Hands",
+        "icon": "/agent-abilities/phoenix-ability1.png"
+      },
+      "ability2": {
+        "name": "Curveball",
+        "icon": "/agent-abilities/phoenix-ability2.png"
+      },
+      "ability3": {
+        "name": "Blaze",
+        "icon": "/agent-abilities/phoenix-ability3.png"
+      },
+      "ultimate": {
+        "name": "Run it Back",
+        "icon": "/agent-abilities/phoenix-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "raze",
+    "name": "Raze",
+    "abilities": {
+      "ability1": {
+        "name": "Blast Pack",
+        "icon": "/agent-abilities/raze-ability1.png"
+      },
+      "ability2": {
+        "name": "Paint Shells",
+        "icon": "/agent-abilities/raze-ability2.png"
+      },
+      "ability3": {
+        "name": "Boom Bot",
+        "icon": "/agent-abilities/raze-ability3.png"
+      },
+      "ultimate": {
+        "name": "Showstopper",
+        "icon": "/agent-abilities/raze-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "reyna",
+    "name": "Reyna",
+    "abilities": {
+      "ability1": {
+        "name": "Devour",
+        "icon": "/agent-abilities/reyna-ability1.png"
+      },
+      "ability2": {
+        "name": "Dismiss",
+        "icon": "/agent-abilities/reyna-ability2.png"
+      },
+      "ability3": {
+        "name": "Leer",
+        "icon": "/agent-abilities/reyna-ability3.png"
+      },
+      "ultimate": {
+        "name": "Empress",
+        "icon": "/agent-abilities/reyna-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "sage",
+    "name": "Sage",
+    "abilities": {
+      "ability1": {
+        "name": "Slow Orb",
+        "icon": "/agent-abilities/sage-ability1.png"
+      },
+      "ability2": {
+        "name": "Healing Orb",
+        "icon": "/agent-abilities/sage-ability2.png"
+      },
+      "ability3": {
+        "name": "Barrier Orb",
+        "icon": "/agent-abilities/sage-ability3.png"
+      },
+      "ultimate": {
+        "name": "Resurrection",
+        "icon": "/agent-abilities/sage-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "skye",
+    "name": "Skye",
+    "abilities": {
+      "ability1": {
+        "name": "Trailblazer",
+        "icon": "/agent-abilities/skye-ability1.png"
+      },
+      "ability2": {
+        "name": "Guiding Light",
+        "icon": "/agent-abilities/skye-ability2.png"
+      },
+      "ability3": {
+        "name": "Regrowth",
+        "icon": "/agent-abilities/skye-ability3.png"
+      },
+      "ultimate": {
+        "name": "Seekers",
+        "icon": "/agent-abilities/skye-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "sova",
+    "name": "Sova",
+    "abilities": {
+      "ability1": {
+        "name": "Shock Bolt",
+        "icon": "/agent-abilities/sova-ability1.png"
+      },
+      "ability2": {
+        "name": "Recon Bolt",
+        "icon": "/agent-abilities/sova-ability2.png"
+      },
+      "ability3": {
+        "name": "Owl Drone",
+        "icon": "/agent-abilities/sova-ability3.png"
+      },
+      "ultimate": {
+        "name": "Hunter's Fury",
+        "icon": "/agent-abilities/sova-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "tejo",
+    "name": "Tejo",
+    "abilities": {
+      "ability1": {
+        "name": "Special Delivery",
+        "icon": "/agent-abilities/tejo-ability1.png"
+      },
+      "ability2": {
+        "name": "Guided Salvo",
+        "icon": "/agent-abilities/tejo-ability2.png"
+      },
+      "ability3": {
+        "name": "Stealth Drone",
+        "icon": "/agent-abilities/tejo-ability3.png"
+      },
+      "ultimate": {
+        "name": "Armageddon",
+        "icon": "/agent-abilities/tejo-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "veto",
+    "name": "Veto",
+    "abilities": {
+      "ability1": {
+        "name": "Chokehold",
+        "icon": "/agent-abilities/veto-ability1.png"
+      },
+      "ability2": {
+        "name": "Interceptor",
+        "icon": "/agent-abilities/veto-ability2.png"
+      },
+      "ability3": {
+        "name": "Crosscut",
+        "icon": "/agent-abilities/veto-ability3.png"
+      },
+      "ultimate": {
+        "name": "Evolution",
+        "icon": "/agent-abilities/veto-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "viper",
+    "name": "Viper",
+    "abilities": {
+      "ability1": {
+        "name": "Poison Cloud",
+        "icon": "/agent-abilities/viper-ability1.png"
+      },
+      "ability2": {
+        "name": "Toxic Screen",
+        "icon": "/agent-abilities/viper-ability2.png"
+      },
+      "ability3": {
+        "name": "Snake Bite",
+        "icon": "/agent-abilities/viper-ability3.png"
+      },
+      "ultimate": {
+        "name": "Viper's Pit",
+        "icon": "/agent-abilities/viper-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "vyse",
+    "name": "Vyse",
+    "abilities": {
+      "ability1": {
+        "name": "Shear",
+        "icon": "/agent-abilities/vyse-ability1.png"
+      },
+      "ability2": {
+        "name": "Arc Rose",
+        "icon": "/agent-abilities/vyse-ability2.png"
+      },
+      "ability3": {
+        "name": "Razorvine",
+        "icon": "/agent-abilities/vyse-ability3.png"
+      },
+      "ultimate": {
+        "name": "Steel Garden",
+        "icon": "/agent-abilities/vyse-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "waylay",
+    "name": "Waylay",
+    "abilities": {
+      "ability1": {
+        "name": "Lightspeed",
+        "icon": "/agent-abilities/waylay-ability1.png"
+      },
+      "ability2": {
+        "name": "Refract",
+        "icon": "/agent-abilities/waylay-ability2.png"
+      },
+      "ability3": {
+        "name": "Saturate",
+        "icon": "/agent-abilities/waylay-ability3.png"
+      },
+      "ultimate": {
+        "name": "Convergent Paths",
+        "icon": "/agent-abilities/waylay-ultimate.png"
+      }
+    }
+  },
+  {
+    "slug": "yoru",
+    "name": "Yoru",
+    "abilities": {
+      "ability1": {
+        "name": "BLINDSIDE",
+        "icon": "/agent-abilities/yoru-ability1.png"
+      },
+      "ability2": {
+        "name": "GATECRASH",
+        "icon": "/agent-abilities/yoru-ability2.png"
+      },
+      "ability3": {
+        "name": "FAKEOUT",
+        "icon": "/agent-abilities/yoru-ability3.png"
+      },
+      "ultimate": {
+        "name": "DIMENSIONAL DRIFT",
+        "icon": "/agent-abilities/yoru-ultimate.png"
+      }
+    }
+  }
+]

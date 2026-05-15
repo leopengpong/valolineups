@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "abyss",
+    "name": "Abyss",
+    "in_competitive_rotation": false
+  },
+  {
+    "slug": "ascent",
+    "name": "Ascent",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "bind",
+    "name": "Bind",
+    "in_competitive_rotation": false
+  },
+  {
+    "slug": "breeze",
+    "name": "Breeze",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "corrode",
+    "name": "Corrode",
+    "in_competitive_rotation": false
+  },
+  {
+    "slug": "fracture",
+    "name": "Fracture",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "haven",
+    "name": "Haven",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "icebox",
+    "name": "Icebox",
+    "in_competitive_rotation": false
+  },
+  {
+    "slug": "lotus",
+    "name": "Lotus",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "pearl",
+    "name": "Pearl",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "split",
+    "name": "Split",
+    "in_competitive_rotation": true
+  },
+  {
+    "slug": "sunset",
+    "name": "Sunset",
+    "in_competitive_rotation": false
+  }
+]

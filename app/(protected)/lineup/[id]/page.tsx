@@ -27,8 +27,8 @@ export default async function EditLineupPage({ params }: { params: Params }) {
 
   const initial = {
     id: withUrls.id,
-    mapId: withUrls.map_id,
-    agentId: withUrls.agent_id,
+    mapSlug: withUrls.map_slug,
+    agentSlug: withUrls.agent_slug,
     side: withUrls.side,
     images: withUrls.images.map((img) => ({
       existingPath: img.path,

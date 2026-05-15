@@ -3,17 +3,10 @@
 
 create extension if not exists "pgcrypto";
 
-create table if not exists maps (
-  id uuid primary key default gen_random_uuid(),
-  name text unique not null,
-  created_at timestamptz default now()
-);
-
-create table if not exists agents (
-  id uuid primary key default gen_random_uuid(),
-  name text unique not null,
-  created_at timestamptz default now()
-);
+-- Maps and agents are NOT in the DB — they're static reference data,
+-- committed at lib/data/{maps,agents}.json and refreshed from
+-- valorant-api.com by asset_updater/sync-reference.mjs at build time.
+-- Lineups reference them by slug stored as plain text.
 
 -- Runtime-configurable string fields shown on each lineup form.
 create table if not exists field_definitions (
@@ -27,8 +20,8 @@ create table if not exists field_definitions (
 
 create table if not exists lineups (
   id uuid primary key default gen_random_uuid(),
-  map_id uuid not null references maps(id) on delete restrict,
-  agent_id uuid not null references agents(id) on delete restrict,
+  map_slug text not null,
+  agent_slug text not null,
   side text not null check (side in ('attack', 'defense')),
   images jsonb not null default '[]'::jsonb,
   custom_fields jsonb not null default '{}'::jsonb,
@@ -36,7 +29,7 @@ create table if not exists lineups (
   updated_at timestamptz default now()
 );
 
-create index if not exists lineups_filter_idx on lineups (map_id, agent_id, side);
+create index if not exists lineups_filter_idx on lineups (map_slug, agent_slug, side);
 create index if not exists lineups_created_at_idx on lineups (created_at desc);
 
 -- Auto-bump updated_at on row update.
@@ -63,8 +56,6 @@ create trigger lineups_set_updated_at
 -- directly, so the publishable (anon) key should have zero DB access.
 -- Result: if the publishable key leaks, the attacker still can't read or
 -- write anything via the Supabase REST/Realtime APIs.
-alter table maps enable row level security;
-alter table agents enable row level security;
 alter table field_definitions enable row level security;
 alter table lineups enable row level security;
 

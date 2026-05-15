@@ -1,7 +1,6 @@
 import { BackButton } from "@/components/back-button";
 import { LineupForm } from "@/components/lineup-form";
 import { listAgents, listFields, listMaps } from "@/lib/data/reference";
-import { indexBySlug } from "@/lib/slug";
 import type { Side } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +18,9 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
     listFields(),
   ]);
 
-  const mapIdx = indexBySlug(maps);
-  const agentIdx = indexBySlug(agents);
-  const prefilledMapId = sp.map ? mapIdx.bySlug.get(sp.map)?.id : undefined;
-  const prefilledAgentId = sp.agent
-    ? agentIdx.bySlug.get(sp.agent)?.id
-    : undefined;
+  const knownMap = sp.map && maps.some((m) => m.slug === sp.map) ? sp.map : undefined;
+  const knownAgent =
+    sp.agent && agents.some((a) => a.slug === sp.agent) ? sp.agent : undefined;
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6">
@@ -38,7 +34,7 @@ export default async function AddPage({ searchParams }: { searchParams: SP }) {
         maps={maps}
         agents={agents}
         fields={fields}
-        prefilledFilters={{ map: prefilledMapId, agent: prefilledAgentId, side }}
+        prefilledFilters={{ map: knownMap, agent: knownAgent, side }}
       />
     </main>
   );

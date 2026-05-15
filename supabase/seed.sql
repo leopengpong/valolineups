@@ -1,52 +1,9 @@
 -- Valorant Lineups DB — seed
--- Idempotent. Safe to re-run; existing rows by name/key are left alone.
-
--- Maps (current + past competitive pool; edit in /settings as needed).
-insert into maps (name) values
-  ('Ascent'),
-  ('Bind'),
-  ('Breeze'),
-  ('Fracture'),
-  ('Haven'),
-  ('Icebox'),
-  ('Lotus'),
-  ('Pearl'),
-  ('Split'),
-  ('Sunset'),
-  ('Abyss'),
-  ('Corrode')
-on conflict (name) do nothing;
-
--- Agents (full roster; edit in /settings as needed).
-insert into agents (name) values
-  ('Astra'),
-  ('Breach'),
-  ('Brimstone'),
-  ('Chamber'),
-  ('Clove'),
-  ('Cypher'),
-  ('Deadlock'),
-  ('Fade'),
-  ('Gekko'),
-  ('Harbor'),
-  ('Iso'),
-  ('Jett'),
-  ('KAY/O'),
-  ('Killjoy'),
-  ('Neon'),
-  ('Omen'),
-  ('Phoenix'),
-  ('Raze'),
-  ('Reyna'),
-  ('Sage'),
-  ('Skye'),
-  ('Sova'),
-  ('Tejo'),
-  ('Viper'),
-  ('Vyse'),
-  ('Waylay'),
-  ('Yoru')
-on conflict (name) do nothing;
+-- Idempotent. Safe to re-run; existing rows by key are left alone.
+--
+-- Maps and agents are NOT seeded here — they're committed JSON refreshed at
+-- build time by asset_updater/sync-reference.mjs. See lib/data/maps.json and
+-- lib/data/agents.json.
 
 -- Default custom fields shown on each lineup form.
 -- The 3 "primary" fields shown most prominently on cheat-sheet cards

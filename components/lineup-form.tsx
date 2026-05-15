@@ -19,7 +19,6 @@ import {
 import { ImageInput, type ImageItem } from "@/components/image-input";
 import { compressImage } from "@/lib/image";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { toSlug } from "@/lib/slug";
 import { STORAGE_BUCKET } from "@/lib/types";
 import type {
   Agent,
@@ -30,8 +29,8 @@ import type {
 
 type InitialValue = {
   id?: string;
-  mapId?: string;
-  agentId?: string;
+  mapSlug?: string;
+  agentSlug?: string;
   side?: Side;
   images: ImageItem[];
   customFields: Record<string, string>;
@@ -62,11 +61,11 @@ export function LineupForm({
     );
   }
 
-  const [mapId, setMapId] = useState<string>(
-    initial?.mapId ?? prefilledFilters?.map ?? "",
+  const [mapSlug, setMapSlug] = useState<string>(
+    initial?.mapSlug ?? prefilledFilters?.map ?? "",
   );
-  const [agentId, setAgentId] = useState<string>(
-    initial?.agentId ?? prefilledFilters?.agent ?? "",
+  const [agentSlug, setAgentSlug] = useState<string>(
+    initial?.agentSlug ?? prefilledFilters?.agent ?? "",
   );
   const [side, setSide] = useState<Side>(
     initial?.side ?? prefilledFilters?.side ?? "attack",
@@ -162,7 +161,7 @@ export function LineupForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!mapId || !agentId) {
+    if (!mapSlug || !agentSlug) {
       setError("Map and agent are required.");
       return;
     }
@@ -174,8 +173,8 @@ export function LineupForm({
     try {
       const finalImages = await uploadNewImages();
       const payload = {
-        map_id: mapId,
-        agent_id: agentId,
+        map_slug: mapSlug,
+        agent_slug: agentSlug,
         side,
         images: finalImages,
         custom_fields: customFields,
@@ -192,11 +191,9 @@ export function LineupForm({
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || "Save failed");
       }
-      const mapName = maps.find((m) => m.id === mapId)?.name;
-      const agentName = agents.find((a) => a.id === agentId)?.name;
       const sp = new URLSearchParams();
-      if (mapName) sp.set("map", toSlug(mapName));
-      if (agentName) sp.set("agent", toSlug(agentName));
+      sp.set("map", mapSlug);
+      sp.set("agent", agentSlug);
       sp.set("side", side);
       invalidateLineupCaches();
       router.push(`/?${sp.toString()}`);
@@ -216,11 +213,9 @@ export function LineupForm({
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Delete failed");
-      const mapName = maps.find((m) => m.id === mapId)?.name;
-      const agentName = agents.find((a) => a.id === agentId)?.name;
       const sp = new URLSearchParams();
-      if (mapName) sp.set("map", toSlug(mapName));
-      if (agentName) sp.set("agent", toSlug(agentName));
+      if (mapSlug) sp.set("map", mapSlug);
+      if (agentSlug) sp.set("agent", agentSlug);
       sp.set("side", side);
       invalidateLineupCaches();
       router.push(`/?${sp.toString()}`);
@@ -237,16 +232,16 @@ export function LineupForm({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <FieldSelect
           label="Map"
-          value={mapId}
-          onChange={setMapId}
-          options={maps.map((m) => ({ value: m.id, label: m.name }))}
+          value={mapSlug}
+          onChange={setMapSlug}
+          options={maps.map((m) => ({ value: m.slug, label: m.name }))}
           placeholder="Pick a map"
         />
         <FieldSelect
           label="Agent"
-          value={agentId}
-          onChange={setAgentId}
-          options={agents.map((a) => ({ value: a.id, label: a.name }))}
+          value={agentSlug}
+          onChange={setAgentSlug}
+          options={agents.map((a) => ({ value: a.slug, label: a.name }))}
           placeholder="Pick an agent"
         />
         <SideField value={side} onChange={setSide} />
@@ -300,11 +295,7 @@ export function LineupForm({
           {pending ? "Saving…" : isEdit ? "Save" : "Create"}
         </Button>
         <Link
-          href={cheatSheetHref({
-            mapName: maps.find((m) => m.id === mapId)?.name,
-            agentName: agents.find((a) => a.id === agentId)?.name,
-            side,
-          })}
+          href={cheatSheetHref({ mapSlug, agentSlug, side })}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
           Cancel
@@ -493,13 +484,13 @@ function StanceField({
 }
 
 function cheatSheetHref(f: {
-  mapName?: string;
-  agentName?: string;
+  mapSlug?: string;
+  agentSlug?: string;
   side: Side;
 }) {
   const sp = new URLSearchParams();
-  if (f.mapName) sp.set("map", toSlug(f.mapName));
-  if (f.agentName) sp.set("agent", toSlug(f.agentName));
+  if (f.mapSlug) sp.set("map", f.mapSlug);
+  if (f.agentSlug) sp.set("agent", f.agentSlug);
   sp.set("side", f.side);
   return `/?${sp.toString()}`;
 }

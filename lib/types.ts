@@ -19,15 +19,32 @@ export type LineupImage = {
   crop_h?: number;
 };
 
+// Maps and agents are static reference data: source of truth lives in
+// lib/data/{maps,agents}.json, refreshed from valorant-api.com by
+// asset_updater/sync-reference.mjs at build time. The slug — derived once
+// from the display name (lowercase, "/" dropped, non-alphanumerics → "-")
+// — is the stable identity, used in URLs and as the foreign-key-equivalent
+// on lineups.
+
 export type Map = {
-  id: string;
+  slug: string;
   name: string;
   in_competitive_rotation: boolean;
 };
 
-export type Agent = {
-  id: string;
+export type AgentAbility = {
   name: string;
+  icon: string; // public-relative path, e.g. "/agent-abilities/sova-ability1.png"
+};
+
+export type AgentAbilityKey = "ability1" | "ability2" | "ability3" | "ultimate";
+
+export type Agent = {
+  slug: string;
+  name: string;
+  // The API's "Grenade" slot is exposed as ability3. "Passive" is not synced.
+  // Partial in case a brand-new agent ships with incomplete API data.
+  abilities: Partial<Record<AgentAbilityKey, AgentAbility>>;
 };
 
 export type FieldInputType = "text" | "textarea";
@@ -42,8 +59,8 @@ export type FieldDefinition = {
 
 export type Lineup = {
   id: string;
-  map_id: string;
-  agent_id: string;
+  map_slug: string;
+  agent_slug: string;
   side: Side;
   images: LineupImage[];
   custom_fields: Record<string, string>;

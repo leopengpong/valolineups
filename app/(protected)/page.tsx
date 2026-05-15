@@ -7,7 +7,6 @@ import {
 import { FilterBar } from "@/components/filter-bar";
 import { LineupGrid } from "@/components/lineup-grid";
 import { SideProvider } from "@/components/side-context";
-import { indexBySlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +26,9 @@ export default async function CheatSheetPage({
     getLineupCounts(),
   ]);
 
-  const mapIdx = indexBySlug(maps);
-  const agentIdx = indexBySlug(agents);
-  const mapSlug = sp.map && mapIdx.bySlug.has(sp.map) ? sp.map : undefined;
+  const mapSlug = sp.map && maps.some((m) => m.slug === sp.map) ? sp.map : undefined;
   const agentSlug =
-    sp.agent && agentIdx.bySlug.has(sp.agent) ? sp.agent : undefined;
+    sp.agent && agents.some((a) => a.slug === sp.agent) ? sp.agent : undefined;
 
   const hasFilters = Boolean(mapSlug && agentSlug);
 

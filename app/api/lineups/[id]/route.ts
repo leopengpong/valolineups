@@ -27,8 +27,8 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   const before = existing as Lineup;
 
   const update: Record<string, unknown> = {};
-  if (typeof b.map_id === "string") update.map_id = b.map_id;
-  if (typeof b.agent_id === "string") update.agent_id = b.agent_id;
+  if (typeof b.map_slug === "string") update.map_slug = b.map_slug;
+  if (typeof b.agent_slug === "string") update.agent_slug = b.agent_slug;
   if (b.side === "attack" || b.side === "defense")
     update.side = b.side as Side;
   if (Array.isArray(b.images)) {

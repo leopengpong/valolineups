@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { toSlug } from "@/lib/slug";
 import { ImageSizeSlider } from "@/components/image-size-slider";
 import { LocalZoomToggle } from "@/components/local-zoom-toggle";
 import { LineupMatrix } from "@/components/lineup-matrix";
@@ -63,18 +62,18 @@ export function FilterBar({
   const setSide = useSetSide();
 
   const selectedMap = useMemo(
-    () => maps.find((m) => toSlug(m.name) === current.mapSlug),
+    () => maps.find((m) => m.slug === current.mapSlug),
     [maps, current.mapSlug],
   );
   const selectedAgent = useMemo(
-    () => agents.find((a) => toSlug(a.name) === current.agentSlug),
+    () => agents.find((a) => a.slug === current.agentSlug),
     [agents, current.agentSlug],
   );
 
   const sideCounts = useMemo(() => {
     if (!selectedMap || !selectedAgent || !lineupCounts) return null;
     return (
-      lineupCounts.byMapAgentSide[selectedMap.id]?.[selectedAgent.id] ?? {
+      lineupCounts.byMapAgentSide[selectedMap.slug]?.[selectedAgent.slug] ?? {
         attack: 0,
         defense: 0,
       }
@@ -233,12 +232,6 @@ export function FilterBar({
             + Add
           </Link>
         )}
-        <Link
-          href="/settings"
-          className={buttonVariants({ size: "sm", variant: "ghost" })}
-        >
-          Settings
-        </Link>
       </span>
     </div>
   );
