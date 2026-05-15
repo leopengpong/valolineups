@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { blobToImageFile } from "@/lib/image";
 
 export type ImageItem = {
@@ -323,30 +328,42 @@ export function ImageInput({
                       →
                     </Button>
                   </div>
-                  <label
-                    className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground"
-                    title="Cropping is encouraged to maximize space on the cheat sheet."
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.customCrop ?? false}
-                      onChange={(e) => toggleCustomCrop(i, e.target.checked)}
-                      className="h-3.5 w-3.5 cursor-pointer accent-primary"
-                    />
-                    <span>Custom crop</span>
-                  </label>
-                  <label
-                    className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground"
-                    title="No custom zoom point = the image zooms its dead center by default."
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.customZoom ?? false}
-                      onChange={(e) => toggleCustomZoom(i, e.target.checked)}
-                      className="h-3.5 w-3.5 cursor-pointer accent-primary"
-                    />
-                    <span>Custom zoom point</span>
-                  </label>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground" />
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.customCrop ?? false}
+                        onChange={(e) => toggleCustomCrop(i, e.target.checked)}
+                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                      />
+                      <span>Custom crop</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Cropping is encouraged to maximize space on the cheat sheet
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground" />
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.customZoom ?? false}
+                        onChange={(e) => toggleCustomZoom(i, e.target.checked)}
+                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                      />
+                      <span>Custom zoom point</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Custom local zoom circle (unchecked defaults to center)
+                    </TooltipContent>
+                  </Tooltip>
                   <span className="ml-auto" />
                   <Button
                     type="button"
