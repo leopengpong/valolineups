@@ -7,6 +7,11 @@ import { ImageOverlay } from "@/components/image-overlay";
 import { useAllLocalZoom } from "@/components/local-zoom-toggle";
 import { hideLineup, unhideLineup } from "@/components/hidden-lineups";
 import { useToast } from "@/components/toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import agentsJson from "@/lib/data/agents.json";
 import type {
   Agent,
@@ -36,7 +41,7 @@ export function LineupCard({
 }) {
   const [openUrl, setOpenUrl] = useState<string | null>(null);
   const toast = useToast();
-  const { primary, secondary } = splitSummary(
+  const { abilities, textPrimary, secondary } = splitSummary(
     lineup.custom_fields,
     lineup.abilities ?? [],
     lineup.agent_slug,
@@ -54,6 +59,11 @@ export function LineupCard({
     });
   };
 
+  const isEmpty =
+    abilities.length === 0 &&
+    textPrimary.length === 0 &&
+    secondary.length === 0;
+
   return (
     <>
       <div className="group relative flex min-w-[280px] flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted">
@@ -69,61 +79,72 @@ export function LineupCard({
         <Link
           href={`/lineup/${lineup.id}`}
           className="block pl-1 pr-9 pb-2 pt-1 hover:opacity-90"
-          title={summaryTitle(primary, secondary) || "Edit lineup"}
+          title={summaryTitle(abilities, textPrimary, secondary) || "Edit lineup"}
         >
-          {primary.length === 0 && secondary.length === 0 ? (
+          {isEmpty ? (
             <span className="text-sm italic text-muted-foreground/60">
               no summary
             </span>
           ) : (
-            <>
-              {primary.length > 0 && (
-                <div className="flex flex-wrap items-center gap-x-2 text-lg font-medium leading-tight text-foreground">
-                  {primary.map((item, i) => (
-                    <span key={i} className="contents">
-                      {i > 0 && (
+            // Ability icons sit in a left column sized to fill the combined
+            // height of the title + secondary rows; notes (secondary) live in
+            // the right column under the title instead of wrapping below the
+            // icons full-width.
+            <div className="flex items-center gap-4">
+              {abilities.length > 0 && (
+                <div className="flex shrink-0 items-center gap-1">
+                  {abilities.map((a, idx) => (
+                    <span key={idx} className="contents">
+                      {idx > 0 && (
                         <span
                           aria-hidden
                           className="text-muted-foreground/70"
                         >
-                          |
+                          +
                         </span>
                       )}
-                      {item.kind === "text" ? (
-                        <span className="truncate">{item.value}</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1">
-                          {item.icons.map((a, idx) => (
-                            <span key={idx} className="contents">
-                              {idx > 0 && (
-                                <span
-                                  aria-hidden
-                                  className="text-muted-foreground/70"
-                                >
-                                  +
-                                </span>
-                              )}
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={a.icon}
-                                alt={a.name}
-                                title={a.name}
-                                className="h-6 w-6 object-contain"
-                              />
-                            </span>
-                          ))}
-                        </span>
-                      )}
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={<span className="inline-flex" />}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={a.icon}
+                            alt={a.name}
+                            className="h-12 w-12 object-contain"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>{a.name}</TooltipContent>
+                      </Tooltip>
                     </span>
                   ))}
                 </div>
               )}
-              {/* Always render the secondary line so cards with vs. without
-                  notes align vertically when laid out side-by-side. */}
-              <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                {secondary.length > 0 ? secondary.join(" · ") : " "}
+              <div className="min-w-0 flex-1">
+                {textPrimary.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-x-2 text-lg font-medium leading-tight text-foreground">
+                    {textPrimary.map((value, i) => (
+                      <span key={i} className="contents">
+                        {i > 0 && (
+                          <span
+                            aria-hidden
+                            className="text-muted-foreground/70"
+                          >
+                            |
+                          </span>
+                        )}
+                        <span className="truncate">{value}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Always render the secondary line so cards with vs. without
+                    notes align vertically when laid out side-by-side. */}
+                <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                  {secondary.length > 0 ? secondary.join(" · ") : " "}
+                </div>
               </div>
-            </>
+            </div>
           )}
         </Link>
         <div className="flex gap-3">
@@ -345,53 +366,51 @@ function clamp01_100(n: number): number {
 const PRIMARY_TEXT_KEYS = ["title", "stance"] as const;
 const PRIMARY_KEYS = new Set<string>([...PRIMARY_TEXT_KEYS, "ability"]);
 
-type PrimaryItem =
-  | { kind: "text"; value: string }
-  | { kind: "abilities"; icons: AgentAbility[] };
-
-// Split into "primary" (ability icons | title text | stance text — featured
-// prominently) and "secondary" (every other custom field, joined with `·` on a
-// smaller muted line). Secondary follows the field_definitions sort_order.
+// Split into ability icons (own column on the card), text primary (title and
+// stance, featured prominently to the right of the icons), and secondary
+// (every other custom field, joined on a smaller muted line under the title).
+// Secondary follows the field_definitions sort_order.
 function splitSummary(
   custom: Record<string, string>,
-  abilities: AgentAbilityKey[],
+  abilityKeys: AgentAbilityKey[],
   agentSlug: string,
   fields: FieldDefinition[],
-): { primary: PrimaryItem[]; secondary: string[] } {
+): {
+  abilities: AgentAbility[];
+  textPrimary: string[];
+  secondary: string[];
+} {
   const byKey = new Map(fields.map((f) => [f.key, f]));
-  const primary: PrimaryItem[] = [];
   const agent = AGENT_BY_SLUG.get(agentSlug);
-  const icons = abilities
+  const abilities = abilityKeys
     .map((k) => agent?.abilities[k])
     .filter((a): a is AgentAbility => Boolean(a));
-  if (icons.length > 0) {
-    primary.push({ kind: "abilities", icons });
-  }
+  const textPrimary: string[] = [];
   const title = custom?.title?.trim();
-  if (title && byKey.has("title")) {
-    primary.push({ kind: "text", value: title });
-  }
+  if (title && byKey.has("title")) textPrimary.push(title);
   const stance = custom?.stance?.trim();
-  if (stance && byKey.has("stance")) {
-    primary.push({ kind: "text", value: stance });
-  }
+  if (stance && byKey.has("stance")) textPrimary.push(stance);
   const secondary: string[] = [];
   for (const f of fields) {
     if (PRIMARY_KEYS.has(f.key)) continue;
     const v = custom?.[f.key];
     if (v && v.trim()) secondary.push(v.trim());
   }
-  return { primary, secondary };
+  return { abilities, textPrimary, secondary };
 }
 
-// Plain-text tooltip on the card link. Renders icon items as their ability
-// names so the hover title is still meaningful (e.g. "shock dart · Standing").
-function summaryTitle(primary: PrimaryItem[], secondary: string[]): string {
+// Plain-text tooltip on the card link. Joins ability names so the hover title
+// stays meaningful even when the visible row is just icons.
+function summaryTitle(
+  abilities: AgentAbility[],
+  textPrimary: string[],
+  secondary: string[],
+): string {
   const parts: string[] = [];
-  for (const item of primary) {
-    if (item.kind === "text") parts.push(item.value);
-    else parts.push(item.icons.map((a) => a.name).join(" + "));
+  if (abilities.length > 0) {
+    parts.push(abilities.map((a) => a.name).join(" + "));
   }
+  for (const t of textPrimary) parts.push(t);
   for (const v of secondary) parts.push(v);
   return parts.join(" · ");
 }
