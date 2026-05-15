@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { deleteStorageObjects, normalizeImages } from "@/lib/lineups";
+import {
+  deleteStorageObjects,
+  normalizeAbilities,
+  normalizeImages,
+} from "@/lib/lineups";
 import type { Lineup, Side } from "@/lib/types";
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -45,6 +49,9 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     update.custom_fields = sanitizeCustomFields(
       b.custom_fields as Record<string, unknown>,
     );
+  }
+  if (Array.isArray(b.abilities)) {
+    update.abilities = normalizeAbilities(b.abilities);
   }
 
   const { error } = await supabase.from("lineups").update(update).eq("id", id);
@@ -96,6 +103,9 @@ function sanitizeCustomFields(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(input)) {
+    // `ability` is no longer a custom field — it's the dedicated abilities[]
+    // column. Drop any incoming value so stale clients can't repopulate it.
+    if (k === "ability") continue;
     if (typeof v === "string" && v.trim() !== "") out[k] = v;
   }
   return out;

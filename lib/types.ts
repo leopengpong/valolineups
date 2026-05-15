@@ -39,6 +39,16 @@ export type AgentAbility = {
 
 export type AgentAbilityKey = "ability1" | "ability2" | "ability3" | "ultimate";
 
+// Canonical render/storage order for ability slots. Keep in sync with the
+// CHECK constraint on lineups.abilities and the SLOT_TO_KEY map in
+// asset_updater/sync-reference.mjs.
+export const ABILITY_KEYS: readonly AgentAbilityKey[] = [
+  "ability1",
+  "ability2",
+  "ability3",
+  "ultimate",
+] as const;
+
 export type Agent = {
   slug: string;
   name: string;
@@ -64,6 +74,8 @@ export type Lineup = {
   side: Side;
   images: LineupImage[];
   custom_fields: Record<string, string>;
+  // Subset of ABILITY_KEYS, persisted server-side in canonical order.
+  abilities: AgentAbilityKey[];
   created_at: string;
   updated_at: string;
 };

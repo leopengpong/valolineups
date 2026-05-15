@@ -25,6 +25,10 @@ create table if not exists lineups (
   side text not null check (side in ('attack', 'defense')),
   images jsonb not null default '[]'::jsonb,
   custom_fields jsonb not null default '{}'::jsonb,
+  -- Subset of ('ability1','ability2','ability3','ultimate'). Slot keys mirror
+  -- lib/data/agents.json so the icon + name is derivable from (agent_slug, key).
+  abilities text[] not null default '{}'::text[]
+    check (abilities <@ array['ability1','ability2','ability3','ultimate']::text[]),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

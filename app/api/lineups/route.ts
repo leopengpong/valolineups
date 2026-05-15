@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { attachSignedUrls, listLineups, normalizeImages } from "@/lib/lineups";
+import {
+  attachSignedUrls,
+  listLineups,
+  normalizeAbilities,
+  normalizeImages,
+} from "@/lib/lineups";
 import type { Side } from "@/lib/types";
 
 export async function GET(req: Request) {
@@ -50,6 +55,7 @@ export async function POST(req: Request) {
     b.custom_fields && typeof b.custom_fields === "object"
       ? sanitizeCustomFields(b.custom_fields as Record<string, unknown>)
       : {};
+  const abilities = normalizeAbilities(b.abilities);
 
   const supabase = getServerSupabase();
   const { data, error } = await supabase
@@ -60,6 +66,7 @@ export async function POST(req: Request) {
       side,
       images,
       custom_fields: customFields,
+      abilities,
     })
     .select("id")
     .single();
@@ -73,6 +80,9 @@ function sanitizeCustomFields(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(input)) {
+    // `ability` is no longer a custom field — it's the dedicated abilities[]
+    // column. Drop any incoming value so stale clients can't repopulate it.
+    if (k === "ability") continue;
     if (typeof v === "string" && v.trim() !== "") out[k] = v;
   }
   return out;

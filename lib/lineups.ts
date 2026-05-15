@@ -1,7 +1,9 @@
 import "server-only";
 import { getServerSupabase } from "@/lib/supabase/server";
 import {
+  ABILITY_KEYS,
   STORAGE_BUCKET,
+  type AgentAbilityKey,
   type Lineup,
   type LineupWithUrls,
   type LineupImage,
@@ -122,4 +124,16 @@ function clamp01_100(n: number): number {
   if (n < 0) return 0;
   if (n > 100) return 100;
   return n;
+}
+
+// Returns the slot keys that are present in `input`, in canonical order, with
+// duplicates collapsed and any non-slot strings dropped. The CHECK constraint
+// on lineups.abilities depends on this same set.
+export function normalizeAbilities(input: unknown): AgentAbilityKey[] {
+  if (!Array.isArray(input)) return [];
+  const present = new Set<string>();
+  for (const v of input) {
+    if (typeof v === "string") present.add(v);
+  }
+  return ABILITY_KEYS.filter((k) => present.has(k));
 }

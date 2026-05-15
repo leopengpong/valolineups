@@ -19,9 +19,10 @@ import {
 import { ImageInput, type ImageItem } from "@/components/image-input";
 import { compressImage } from "@/lib/image";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { STORAGE_BUCKET } from "@/lib/types";
+import { ABILITY_KEYS, STORAGE_BUCKET } from "@/lib/types";
 import type {
   Agent,
+  AgentAbilityKey,
   FieldDefinition,
   Map as MapRow,
   Side,
@@ -34,6 +35,7 @@ type InitialValue = {
   side?: Side;
   images: ImageItem[];
   customFields: Record<string, string>;
+  abilities?: AgentAbilityKey[];
 };
 
 export function LineupForm({
@@ -73,6 +75,11 @@ export function LineupForm({
   const [images, setImages] = useState<ImageItem[]>(initial?.images ?? []);
   const [customFields, setCustomFields] = useState<Record<string, string>>(
     initial?.customFields ?? {},
+  );
+  // New lineups default to ability1 selected. Edits use whatever was stored
+  // (may be empty — the user can hit save with 0 selected, just gets a warning).
+  const [abilities, setAbilities] = useState<AgentAbilityKey[]>(
+    initial?.abilities ?? (initial?.id ? [] : ["ability1"]),
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,12 +179,20 @@ export function LineupForm({
     setPending(true);
     try {
       const finalImages = await uploadNewImages();
+      // Drop any selected slot that the chosen agent doesn't actually have —
+      // can happen if the user switched agents mid-edit. The server also
+      // re-validates against the legal slot set.
+      const selectedAgent = agents.find((a) => a.slug === agentSlug);
+      const finalAbilities = selectedAgent
+        ? abilities.filter((k) => Boolean(selectedAgent.abilities[k]))
+        : [];
       const payload = {
         map_slug: mapSlug,
         agent_slug: agentSlug,
         side,
         images: finalImages,
         custom_fields: customFields,
+        abilities: finalAbilities,
       };
       const res = await fetch(
         isEdit ? `/api/lineups/${initial!.id}` : "/api/lineups",
@@ -247,6 +262,12 @@ export function LineupForm({
         <SideField value={side} onChange={setSide} />
       </div>
 
+      <AbilityToggleField
+        agent={agents.find((a) => a.slug === agentSlug)}
+        value={abilities}
+        onChange={setAbilities}
+      />
+
       <div>
         <Label className="mb-2 block">Images (max 3)</Label>
         <ImageInput value={images} onChange={setImages} />
@@ -254,7 +275,12 @@ export function LineupForm({
 
       {fields.length > 0 && (
         <div className="space-y-3">
-          {fields.map((f) => (
+          {fields
+            // `ability` is no longer a custom field — it's the dedicated
+            // <AbilityToggleField> above. Filter defensively in case the
+            // 0004 migration hasn't run yet on this DB.
+            .filter((f) => f.key !== "ability")
+            .map((f) => (
             <div key={f.id}>
               {f.key === "stance" ? (
                 <StanceField
@@ -408,6 +434,80 @@ function SideField({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function AbilityToggleField({
+  agent,
+  value,
+  onChange,
+}: {
+  agent: Agent | undefined;
+  value: AgentAbilityKey[];
+  onChange: (v: AgentAbilityKey[]) => void;
+}) {
+  // Only render toggles for slots the chosen agent actually has — Partial
+  // <Record<AgentAbilityKey, AgentAbility>> in lib/types.ts. Iterating ABILITY_KEYS
+  // (not Object.keys(agent.abilities)) guarantees canonical render order.
+  const slots = agent
+    ? ABILITY_KEYS.filter((k) => Boolean(agent.abilities[k]))
+    : [];
+  const selected = new Set(value);
+
+  function toggle(key: AgentAbilityKey) {
+    const next = new Set(selected);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    // Persist in canonical order so the wire format and DB column agree.
+    onChange(ABILITY_KEYS.filter((k) => next.has(k)));
+  }
+
+  return (
+    <div>
+      <Label className="mb-2 block text-sm">Abilities</Label>
+      {!agent ? (
+        <p className="text-sm text-muted-foreground">
+          Pick an agent above to choose abilities.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {slots.map((key) => {
+              const a = agent.abilities[key]!;
+              const isOn = selected.has(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggle(key)}
+                  aria-pressed={isOn}
+                  title={a.name}
+                  className={
+                    "inline-flex h-14 w-14 items-center justify-center rounded-lg border-2 transition-all " +
+                    (isOn
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card opacity-50 hover:opacity-80")
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={a.icon}
+                    alt={a.name}
+                    className="h-10 w-10 object-contain"
+                  />
+                </button>
+              );
+            })}
+          </div>
+          {value.length === 0 && (
+            <p className="mt-2 text-sm text-amber-600 dark:text-amber-500">
+              ⚠️ No abilities selected — this lineup won&apos;t show an ability
+              icon on the cheat sheet.
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

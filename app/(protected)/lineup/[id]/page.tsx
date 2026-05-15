@@ -48,6 +48,7 @@ export default async function EditLineupPage({ params }: { params: Params }) {
       cropH: img.crop_h,
     })),
     customFields: withUrls.custom_fields ?? {},
+    abilities: withUrls.abilities ?? [],
   };
 
   return (

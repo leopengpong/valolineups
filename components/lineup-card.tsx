@@ -7,7 +7,21 @@ import { ImageOverlay } from "@/components/image-overlay";
 import { useAllLocalZoom } from "@/components/local-zoom-toggle";
 import { hideLineup, unhideLineup } from "@/components/hidden-lineups";
 import { useToast } from "@/components/toast";
-import type { FieldDefinition, LineupImage, LineupWithUrls } from "@/lib/types";
+import agentsJson from "@/lib/data/agents.json";
+import type {
+  Agent,
+  AgentAbility,
+  AgentAbilityKey,
+  FieldDefinition,
+  LineupImage,
+  LineupWithUrls,
+} from "@/lib/types";
+
+// Agent index for ability-icon lookups. agents.json is small (~10-15 KB) and
+// already bundled client-side via the form, so importing here is free.
+const AGENT_BY_SLUG = new Map<string, Agent>(
+  (agentsJson as Agent[]).map((a) => [a.slug, a]),
+);
 
 // Halo + drop-shadow that reads on bright AND dark image regions.
 const LABEL_TEXT_SHADOW =
@@ -22,7 +36,12 @@ export function LineupCard({
 }) {
   const [openUrl, setOpenUrl] = useState<string | null>(null);
   const toast = useToast();
-  const { primary, secondary } = splitSummary(lineup.custom_fields, fields);
+  const { primary, secondary } = splitSummary(
+    lineup.custom_fields,
+    lineup.abilities ?? [],
+    lineup.agent_slug,
+    fields,
+  );
 
   const onHide = () => {
     hideLineup(lineup.id);
@@ -50,7 +69,7 @@ export function LineupCard({
         <Link
           href={`/lineup/${lineup.id}`}
           className="block pl-1 pr-9 pb-2 pt-1 hover:opacity-90"
-          title={[...primary, ...secondary].join(" · ") || "Edit lineup"}
+          title={summaryTitle(primary, secondary) || "Edit lineup"}
         >
           {primary.length === 0 && secondary.length === 0 ? (
             <span className="text-sm italic text-muted-foreground/60">
@@ -59,13 +78,42 @@ export function LineupCard({
           ) : (
             <>
               {primary.length > 0 && (
-                <div className="flex flex-wrap items-baseline gap-x-2 text-lg font-medium leading-tight text-foreground">
-                  {primary.map((v, i) => (
+                <div className="flex flex-wrap items-center gap-x-2 text-lg font-medium leading-tight text-foreground">
+                  {primary.map((item, i) => (
                     <span key={i} className="contents">
                       {i > 0 && (
-                        <span className="text-muted-foreground/60">·</span>
+                        <span
+                          aria-hidden
+                          className="text-muted-foreground/70"
+                        >
+                          |
+                        </span>
                       )}
-                      <span className="truncate">{v}</span>
+                      {item.kind === "text" ? (
+                        <span className="truncate">{item.value}</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          {item.icons.map((a, idx) => (
+                            <span key={idx} className="contents">
+                              {idx > 0 && (
+                                <span
+                                  aria-hidden
+                                  className="text-muted-foreground/70"
+                                >
+                                  +
+                                </span>
+                              )}
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={a.icon}
+                                alt={a.name}
+                                title={a.name}
+                                className="h-6 w-6 object-contain"
+                              />
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -290,23 +338,42 @@ function clamp01_100(n: number): number {
   return n;
 }
 
-// Featured fields shown in the prominent primary row. Order matters: title
-// first, then ability, then stance.
-const PRIMARY_ORDER = ["title", "ability", "stance"] as const;
-const PRIMARY_KEYS = new Set<string>(PRIMARY_ORDER);
+// Primary row ordering: ability icons, then title, then stance. Ability is no
+// longer a custom field — it's the `lineup.abilities` text[] column rendered
+// as icons inline with the surrounding text. Multiple abilities are joined
+// visually with " + " between icons.
+const PRIMARY_TEXT_KEYS = ["title", "stance"] as const;
+const PRIMARY_KEYS = new Set<string>([...PRIMARY_TEXT_KEYS, "ability"]);
 
-// Split custom fields into "primary" (title/ability/stance — featured
-// prominently) and "secondary" (everything else — smaller muted line).
-// Secondary follows the field_definitions sort_order.
+type PrimaryItem =
+  | { kind: "text"; value: string }
+  | { kind: "abilities"; icons: AgentAbility[] };
+
+// Split into "primary" (ability icons | title text | stance text — featured
+// prominently) and "secondary" (every other custom field, joined with `·` on a
+// smaller muted line). Secondary follows the field_definitions sort_order.
 function splitSummary(
   custom: Record<string, string>,
+  abilities: AgentAbilityKey[],
+  agentSlug: string,
   fields: FieldDefinition[],
-): { primary: string[]; secondary: string[] } {
+): { primary: PrimaryItem[]; secondary: string[] } {
   const byKey = new Map(fields.map((f) => [f.key, f]));
-  const primary: string[] = [];
-  for (const k of PRIMARY_ORDER) {
-    const v = custom?.[k];
-    if (v && v.trim() && byKey.has(k)) primary.push(v.trim());
+  const primary: PrimaryItem[] = [];
+  const agent = AGENT_BY_SLUG.get(agentSlug);
+  const icons = abilities
+    .map((k) => agent?.abilities[k])
+    .filter((a): a is AgentAbility => Boolean(a));
+  if (icons.length > 0) {
+    primary.push({ kind: "abilities", icons });
+  }
+  const title = custom?.title?.trim();
+  if (title && byKey.has("title")) {
+    primary.push({ kind: "text", value: title });
+  }
+  const stance = custom?.stance?.trim();
+  if (stance && byKey.has("stance")) {
+    primary.push({ kind: "text", value: stance });
   }
   const secondary: string[] = [];
   for (const f of fields) {
@@ -315,4 +382,16 @@ function splitSummary(
     if (v && v.trim()) secondary.push(v.trim());
   }
   return { primary, secondary };
+}
+
+// Plain-text tooltip on the card link. Renders icon items as their ability
+// names so the hover title is still meaningful (e.g. "shock dart · Standing").
+function summaryTitle(primary: PrimaryItem[], secondary: string[]): string {
+  const parts: string[] = [];
+  for (const item of primary) {
+    if (item.kind === "text") parts.push(item.value);
+    else parts.push(item.icons.map((a) => a.name).join(" + "));
+  }
+  for (const v of secondary) parts.push(v);
+  return parts.join(" · ");
 }
