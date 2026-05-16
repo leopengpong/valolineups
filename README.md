@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Valolineups
 
-## Getting Started
+A personal cheat-sheet site for Valorant lineups — screenshots and metadata stored alongside the map, agent, side, and ability they belong to, then filtered down to exactly what's relevant while you're in game.
 
-First, run the development server:
+**Live:** [valolineups.vercel.app](https://valolineups.vercel.app) — password-protected; the login page links you to my Discord if you need access.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## What it does
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Stash a screenshot (or two, or three) for any lineup — a Sova dart, a Viper wall, a Killjoy ult spot — tagged with the map, agent, side, ability, and a short title. On match start, pick the map and agent and the cheat sheet narrows to just the lineups for that matchup. Toggle Attack ↔ Defense with a single click (or the `s` key).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Designed to be glanceable on a second monitor — no scrolling for the right info, no mouse hunting mid-round.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+![Cheat sheet view — filter bar at the top, lineups grouped in cards by image count, with title, stance, and ability icons on each card.](docs/cheatsheet.png)
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- **Map / agent / side filter bar** with a visual map+agent picker. Selections persist via URL and localStorage, so a bookmarked or back-navigated view comes back exactly as you left it.
+- **Card grid** that auto-sizes by image count — a 3-image lineup spans 3 columns, a single screenshot spans 1 — so multi-shot lineups stay grouped and readable.
+- **Per-card primary line** showing the ability icon, title (e.g. "shock dart A site"), and stance (e.g. "standing / jumping / crouching") at a glance.
+- **Image inputs that match how you actually capture lineups:** paste from clipboard (cmd/ctrl+V), drag-and-drop, or tap to pick from camera roll on phone. Up to 3 images per lineup, auto-compressed in-browser before upload.
+- **Local-zoom indicator** — drop an anchor on each image and the card shows a zoomed circle on the relevant spot. Useful for crosshair placement or smoke-line markers. Toggle "all zoom circles" to keep them on permanently, or hover any image to reveal one.
+- **Per-image crop** — frame the card to just the relevant slice of the screenshot without losing the original image.
+- **Adjustable image height** via a slider in the filter bar — make cards bigger on a 4K monitor, smaller on a laptop. Persisted per device.
+- **Fullscreen image preview** — click any card image for a full-resolution overlay; `esc` closes it.
+- **Ability tagging per lineup** — pick one or more of the agent's actual abilities (auto-derived from the agent, so Sova gets shock dart / recon / owl drone / hunter's fury). Slots that don't belong to the chosen agent are hidden.
+- **Custom fields** — `title` and `stance` are the headline fields; add any other text/textarea field from the settings page (e.g. "notes", "execute timing") and it'll show up on the edit form for every lineup.
+- **Multi-device sync** — edits made on your phone show up on your desktop when you tab back to the page, with no manual refresh.
+- **Settings page** for renaming custom fields, reordering them, and flipping maps in/out of the competitive rotation.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+![Edit lineup view — map/agent/side selectors, ability toggles, image with optional custom crop and zoom anchor, title, stance, and notes.](docs/edit-form.png)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Stack (short version)
 
-## Deploy on Vercel
+Next.js 16, Tailwind v4, Supabase (Postgres + Storage), deployed on Vercel Hobby. Auth is a single shared password gated by an HMAC cookie — no per-user accounts.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For developer setup, schema, and architecture details, see [CLAUDE.md](CLAUDE.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [SPEC.md](SPEC.md).
