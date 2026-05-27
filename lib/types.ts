@@ -6,9 +6,9 @@ export type LineupImage = {
   path: string; // Supabase Storage object key
   label?: string;
   order: number;
-  // Optional custom local-zoom anchor as percentages of the rendered image
-  // (0 = top/left, 100 = bottom/right). Missing values default to 50/50
-  // (dead center) at read time.
+  // When false, no zoom circle or crosshair appears for this image.
+  // Absent means true (backwards compat with pre-existing data).
+  zoom_enabled?: boolean;
   zoom_x?: number;
   zoom_y?: number;
   // Optional crop rectangle as percentages of the natural image. All four are

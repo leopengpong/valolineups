@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +34,16 @@ import type {
   Side,
 } from "@/lib/types";
 
+const MAX_TEXT = 512;
+
+const STANCE_PRESETS = [
+  "Standing",
+  "Crouching",
+  "Jumping",
+  "Running",
+  "Run + Jumping",
+];
+
 type InitialValue = {
   id?: string;
   mapSlug?: string;
@@ -44,6 +53,40 @@ type InitialValue = {
   customFields: Record<string, string>;
   abilities?: AgentAbilityKey[];
 };
+
+function serializeImage(img: ImageItem) {
+  return {
+    ep: img.existingPath ?? null,
+    nf: Boolean(img.file),
+    l: img.label ?? "",
+    ze: img.zoomEnabled ?? true,
+    zx: img.zoomX ?? 50,
+    zy: img.zoomY ?? 50,
+    cc: img.customCrop ?? false,
+    cx: img.cropX,
+    cy: img.cropY,
+    cw: img.cropW,
+    ch: img.cropH,
+  };
+}
+
+function snap(
+  mapSlug: string,
+  agentSlug: string,
+  side: Side,
+  images: ImageItem[],
+  customFields: Record<string, string>,
+  abilities: AgentAbilityKey[],
+) {
+  return JSON.stringify({
+    mapSlug,
+    agentSlug,
+    side,
+    images: images.map(serializeImage),
+    customFields,
+    abilities,
+  });
+}
 
 export function LineupForm({
   maps,
@@ -83,24 +126,108 @@ export function LineupForm({
   const [customFields, setCustomFields] = useState<Record<string, string>>(
     initial?.customFields ?? {},
   );
-  // New lineups default to ability1 selected. Edits use whatever was stored
-  // (may be empty — the user can hit save with 0 selected, just gets a warning).
   const [abilities, setAbilities] = useState<AgentAbilityKey[]>(
     initial?.abilities ?? (initial?.id ? [] : ["ability1"]),
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const pendingNavRef = useRef<(() => void) | null>(null);
+
+  const [initialSnap] = useState(() =>
+    snap(
+      initial?.mapSlug ?? prefilledFilters?.map ?? "",
+      initial?.agentSlug ?? prefilledFilters?.agent ?? "",
+      initial?.side ?? prefilledFilters?.side ?? "attack",
+      initial?.images ?? [],
+      initial?.customFields ?? {},
+      initial?.abilities ?? (initial?.id ? [] : ["ability1"]),
+    ),
+  );
+
+  const titleField = fields.find((f) => f.key === "title");
+  const stanceField = fields.find((f) => f.key === "stance");
+  const otherFields = useMemo(
+    () => fields.filter((f) => f.key !== "title" && f.key !== "stance" && f.key !== "ability"),
+    [fields],
+  );
+
+  // --- dirty detection ---
+  const isDirty = useMemo(
+    () => snap(mapSlug, agentSlug, side, images, customFields, abilities) !== initialSnap,
+    [mapSlug, agentSlug, side, images, customFields, abilities, initialSnap],
+  );
+
+  // --- validation ---
+  const warnings = useMemo(() => {
+    const w: string[] = [];
+    if (!mapSlug) w.push("Map is required");
+    if (!agentSlug) w.push("Agent is required");
+
+    const title = (customFields["title"] ?? "").trim();
+    if (!title) w.push("Title is required");
+    else if (title.length > MAX_TEXT) w.push(`Title must be ${MAX_TEXT} characters or fewer`);
+
+    const stance = customFields["stance"] ?? "";
+    if (!stance) w.push("Stance is required");
+    else if (!STANCE_PRESETS.includes(stance) && stance.length > MAX_TEXT)
+      w.push(`Custom stance must be ${MAX_TEXT} characters or fewer`);
+
+    if (images.length === 0) w.push("At least 1 image is required");
+
+    const notes = customFields["notes"] ?? "";
+    if (notes.length > MAX_TEXT) w.push(`Notes must be ${MAX_TEXT} characters or fewer`);
+
+    return w;
+  }, [mapSlug, agentSlug, customFields, images.length]);
+
+  const isValid = warnings.length === 0;
+  const canSubmit = isValid && !pending && (isEdit ? isDirty : true);
 
   function setCustom(key: string, val: string) {
     setCustomFields((c) => ({ ...c, [key]: val }));
   }
 
+  // --- navigation guard ---
+  function guardedNavigate(navigate: () => void) {
+    if (isDirty) {
+      pendingNavRef.current = navigate;
+      setDiscardOpen(true);
+    } else {
+      navigate();
+    }
+  }
+
+  function handleDiscard() {
+    setDiscardOpen(false);
+    pendingNavRef.current?.();
+    pendingNavRef.current = null;
+  }
+
+  function handleBack() {
+    guardedNavigate(() => {
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push("/");
+      }
+    });
+  }
+
+  function handleCancel() {
+    guardedNavigate(() => {
+      router.push(cheatSheetHref({ mapSlug, agentSlug, side }));
+    });
+  }
+
+  // --- upload ---
   async function uploadNewImages(): Promise<
     Array<{
       path: string;
       label?: string;
       order: number;
+      zoom_enabled?: boolean;
       zoom_x?: number;
       zoom_y?: number;
       crop_x?: number;
@@ -147,6 +274,7 @@ export function LineupForm({
         path: string;
         label?: string;
         order: number;
+        zoom_enabled?: boolean;
         zoom_x?: number;
         zoom_y?: number;
         crop_x?: number;
@@ -158,7 +286,9 @@ export function LineupForm({
         label: img.label?.trim() || undefined,
         order: i,
       };
-      if (img.customZoom) {
+      if (img.zoomEnabled === false) {
+        out.zoom_enabled = false;
+      } else {
         out.zoom_x = img.zoomX ?? 50;
         out.zoom_y = img.zoomY ?? 50;
       }
@@ -172,23 +302,14 @@ export function LineupForm({
     });
   }
 
+  // --- submit ---
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canSubmit) return;
     setError(null);
-    if (!mapSlug || !agentSlug) {
-      setError("Map and agent are required.");
-      return;
-    }
-    if (images.length === 0) {
-      setError("Add at least one image.");
-      return;
-    }
     setPending(true);
     try {
       const finalImages = await uploadNewImages();
-      // Drop any selected slot that the chosen agent doesn't actually have —
-      // can happen if the user switched agents mid-edit. The server also
-      // re-validates against the legal slot set.
       const selectedAgent = agents.find((a) => a.slug === agentSlug);
       const finalAbilities = selectedAgent
         ? abilities.filter((k) => Boolean(selectedAgent.abilities[k]))
@@ -226,6 +347,7 @@ export function LineupForm({
     }
   }
 
+  // --- delete ---
   async function onDelete() {
     if (!initial?.id) return;
     setPending(true);
@@ -250,101 +372,172 @@ export function LineupForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <FieldSelect
-          label="Map"
-          value={mapSlug}
-          onChange={setMapSlug}
-          options={maps.map((m) => ({ value: m.slug, label: m.name }))}
-          placeholder="Pick a map"
-        />
-        <FieldSelect
-          label="Agent"
-          value={agentSlug}
-          onChange={setAgentSlug}
-          options={agents.map((a) => ({ value: a.slug, label: a.name }))}
-          placeholder="Pick an agent"
-        />
-        <SideField value={side} onChange={setSide} />
-      </div>
-
-      <AbilityToggleField
-        agent={agents.find((a) => a.slug === agentSlug)}
-        value={abilities}
-        onChange={setAbilities}
-      />
-
-      <div>
-        <Label className="mb-2 block">Images (max 3)</Label>
-        <ImageInput value={images} onChange={setImages} />
-      </div>
-
-      {fields.length > 0 && (
-        <div className="space-y-3">
-          {fields
-            // `ability` is no longer a custom field — it's the dedicated
-            // <AbilityToggleField> above. Filter defensively in case the
-            // 0004 migration hasn't run yet on this DB.
-            .filter((f) => f.key !== "ability")
-            .map((f) => (
-            <div key={f.id}>
-              {f.key === "stance" ? (
-                <StanceField
-                  label={f.label}
-                  value={customFields[f.key] ?? ""}
-                  onChange={(v) => setCustom(f.key, v)}
-                />
-              ) : (
-                <>
-                  <Label htmlFor={`f-${f.key}`} className="mb-1 block text-sm">
-                    {f.label}
-                  </Label>
-                  {f.input_type === "textarea" ? (
-                    <Textarea
-                      id={`f-${f.key}`}
-                      value={customFields[f.key] ?? ""}
-                      onChange={(e) => setCustom(f.key, e.target.value)}
-                      rows={3}
-                    />
-                  ) : (
-                    <Input
-                      id={`f-${f.key}`}
-                      value={customFields[f.key] ?? ""}
-                      onChange={(e) => setCustom(f.key, e.target.value)}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isEdit ? "Save" : "Create"}
-        </Button>
-        <Link
-          href={cheatSheetHref({ mapSlug, agentSlug, side })}
-          className="text-sm text-muted-foreground hover:text-foreground"
+    <>
+      <div className="mb-4 flex items-baseline justify-between">
+        <h1 className="text-lg font-semibold">
+          {isEdit ? "Edit lineup" : "Add lineup"}
+        </h1>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
         >
-          Cancel
-        </Link>
-        <span className="ml-auto" />
-        {isEdit && (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-            disabled={pending}
-          >
-            Delete
-          </Button>
-        )}
+          ← Back
+        </button>
       </div>
+
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <FieldSelect
+            label="Map"
+            value={mapSlug}
+            onChange={setMapSlug}
+            options={maps.map((m) => ({ value: m.slug, label: m.name }))}
+            placeholder="Pick a map"
+          />
+          <FieldSelect
+            label="Agent"
+            value={agentSlug}
+            onChange={setAgentSlug}
+            options={agents.map((a) => ({ value: a.slug, label: a.name }))}
+            placeholder="Pick an agent"
+          />
+          <SideField value={side} onChange={setSide} />
+        </div>
+
+        <AbilityToggleField
+          agent={agents.find((a) => a.slug === agentSlug)}
+          value={abilities}
+          onChange={setAbilities}
+        />
+
+        {(titleField || stanceField) && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {titleField && (
+              <div>
+                <Label className="mb-1 block text-sm">{titleField.label}</Label>
+                <Input
+                  value={customFields["title"] ?? ""}
+                  onChange={(e) => setCustom("title", e.target.value)}
+                  placeholder="Enter title"
+                  className="h-9"
+                />
+              </div>
+            )}
+            {stanceField && (
+              <StanceField
+                label={stanceField.label}
+                value={customFields["stance"] ?? ""}
+                onChange={(v) => setCustom("stance", v)}
+              />
+            )}
+          </div>
+        )}
+
+        <div>
+          <Label className="mb-2 block">Images (max 5)</Label>
+          <ImageInput value={images} onChange={setImages} />
+        </div>
+
+        {otherFields.length > 0 && (
+          <div className="space-y-3">
+            {otherFields.map((f) => (
+              <div key={f.id}>
+                <Label htmlFor={`f-${f.key}`} className="mb-1 block text-sm">
+                  {f.label}
+                  {f.key === "notes" ? " (optional)" : ""}
+                </Label>
+                {f.input_type === "textarea" ? (
+                  <Textarea
+                    id={`f-${f.key}`}
+                    value={customFields[f.key] ?? ""}
+                    onChange={(e) => setCustom(f.key, e.target.value)}
+                    rows={3}
+                  />
+                ) : (
+                  <Input
+                    id={`f-${f.key}`}
+                    value={customFields[f.key] ?? ""}
+                    onChange={(e) => setCustom(f.key, e.target.value)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {warnings.length > 0 && !pending && (
+          <div className="space-y-1">
+            {warnings.map((w) => (
+              <p key={w} className="text-sm text-amber-600 dark:text-amber-500">
+                {w}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <div className="flex items-center gap-2">
+          <Button type="submit" disabled={!canSubmit}>
+            {pending
+              ? "Saving…"
+              : isEdit
+                ? isDirty
+                  ? "Save"
+                  : "No changes"
+                : "Create"}
+          </Button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+          <span className="ml-auto" />
+          {isEdit && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+              disabled={pending}
+            >
+              Delete
+            </Button>
+          )}
+        </div>
+      </form>
+
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard changes?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes that will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setDiscardOpen(false);
+                pendingNavRef.current = null;
+              }}
+            >
+              Keep editing
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDiscard}
+            >
+              Discard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
@@ -375,7 +568,7 @@ export function LineupForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </form>
+    </>
   );
 }
 
@@ -392,11 +585,6 @@ function FieldSelect({
   options: Array<{ value: string; label: string }>;
   placeholder: string;
 }) {
-  // Use the base-ui Select primitive so the dropdown gets a consistent custom
-  // UI cross-platform — the native <select> falls back to Times New Roman on
-  // Windows. `null` sentinel makes the SelectValue render the placeholder.
-  // `items` is required for SelectValue to render the label of the selected
-  // option instead of its raw value (slug).
   return (
     <div>
       <Label className="mb-1 block text-sm">{label}</Label>
@@ -461,9 +649,6 @@ function AbilityToggleField({
   value: AgentAbilityKey[];
   onChange: (v: AgentAbilityKey[]) => void;
 }) {
-  // Only render toggles for slots the chosen agent actually has — Partial
-  // <Record<AgentAbilityKey, AgentAbility>> in lib/types.ts. Iterating ABILITY_KEYS
-  // (not Object.keys(agent.abilities)) guarantees canonical render order.
   const slots = agent
     ? ABILITY_KEYS.filter((k) => Boolean(agent.abilities[k]))
     : [];
@@ -473,7 +658,6 @@ function AbilityToggleField({
     const next = new Set(selected);
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    // Persist in canonical order so the wire format and DB column agree.
     onChange(ABILITY_KEYS.filter((k) => next.has(k)));
   }
 
@@ -516,7 +700,7 @@ function AbilityToggleField({
           </div>
           {value.length === 0 && (
             <p className="mt-2 text-sm text-amber-600 dark:text-amber-500">
-              ⚠️ No abilities selected — this lineup won&apos;t show an ability
+              No abilities selected — this lineup won&apos;t show an ability
               icon on the cheat sheet.
             </p>
           )}
@@ -525,14 +709,6 @@ function AbilityToggleField({
     </div>
   );
 }
-
-const STANCE_PRESETS = [
-  "Standing",
-  "Crouching",
-  "Jumping",
-  "Running",
-  "Run + Jumping",
-];
 
 function StanceField({
   label,
@@ -547,7 +723,7 @@ function StanceField({
   const [useCustom, setUseCustom] = useState(!isPreset && value !== "");
   const [customText, setCustomText] = useState(!isPreset ? value : "");
 
-  const selectValue = useCustom ? "__custom__" : value;
+  const selectValue = useCustom ? null : (value || null);
 
   function handleSelectChange(v: string) {
     if (v === "__custom__") {
@@ -568,11 +744,11 @@ function StanceField({
     <div>
       <Label className="mb-1 block text-sm">{label}</Label>
       <Select
-        value={selectValue || null}
+        value={selectValue}
         onValueChange={(v) => handleSelectChange((v as string | null) ?? "")}
       >
         <SelectTrigger className="!h-9 w-full bg-card">
-          <SelectValue placeholder="Pick a stance" />
+          <SelectValue placeholder={useCustom ? "Custom…" : "Pick a stance"} />
         </SelectTrigger>
         <SelectContent>
           {STANCE_PRESETS.map((p) => (
@@ -580,15 +756,16 @@ function StanceField({
               {p}
             </SelectItem>
           ))}
-          <SelectItem value="__custom__">Custom…</SelectItem>
+          <SelectItem value="__custom__">Custom&hellip;</SelectItem>
         </SelectContent>
       </Select>
       {useCustom && (
-        <Input
-          className="mt-2"
+        <Textarea
+          className="mt-2 min-h-0 resize-none py-1"
           value={customText}
           onChange={(e) => handleCustomChange(e.target.value)}
           placeholder="Enter custom stance"
+          rows={1}
         />
       )}
     </div>

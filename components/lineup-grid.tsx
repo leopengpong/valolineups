@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Eye } from "lucide-react";
 import useSWR from "swr";
 import { LineupCard } from "@/components/lineup-card";
-import { useSide } from "@/components/side-context";
+import { useSide, useSetSide } from "@/components/side-context";
 import { useHiddenLineups, unhideLineups } from "@/components/hidden-lineups";
 import type { FieldDefinition, LineupWithUrls } from "@/lib/types";
 
@@ -26,6 +26,7 @@ export function LineupGrid({
   fields: FieldDefinition[];
 }) {
   const side = useSide();
+  const setSide = useSetSide();
   const hidden = useHiddenLineups();
   const url = `/api/lineups?map=${encodeURIComponent(mapSlug)}&agent=${encodeURIComponent(agentSlug)}`;
   // Key excludes side: we fetch both sides at once and filter client-side, so
@@ -37,6 +38,23 @@ export function LineupGrid({
     () => fetcher(url),
     { keepPreviousData: true },
   );
+
+  // When map/agent changes and the current side has 0 lineups but the other
+  // side has some, auto-switch to the populated side.
+  const prevDataRef = useRef(data);
+  useEffect(() => {
+    if (!data || data === prevDataRef.current) return;
+    prevDataRef.current = data;
+
+    const attackCount = data.lineups.filter((l) => l.side === "attack").length;
+    const defenseCount = data.lineups.filter((l) => l.side === "defense").length;
+
+    if (side === "attack" && attackCount === 0 && defenseCount > 0) {
+      setSide("defense");
+    } else if (side === "defense" && defenseCount === 0 && attackCount > 0) {
+      setSide("attack");
+    }
+  }, [data, side, setSide]);
 
   const { visible, hiddenIdsInView } = useMemo(() => {
     const all = (data?.lineups ?? []).filter((l) => l.side === side);

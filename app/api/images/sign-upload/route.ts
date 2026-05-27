@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { STORAGE_BUCKET } from "@/lib/types";
 
-const MAX_COUNT = 3;
+const MAX_COUNT = 5;
 
 export async function POST(req: Request) {
   let body: unknown;

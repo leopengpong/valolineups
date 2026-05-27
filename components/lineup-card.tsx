@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { EyeOff } from "lucide-react";
+import { EyeOff, Pencil } from "lucide-react";
 import { ImageOverlay } from "@/components/image-overlay";
 import { useAllLocalZoom } from "@/components/local-zoom-toggle";
+import { ZoomCrosshair } from "@/components/zoom-crosshair";
 import { hideLineup, unhideLineup } from "@/components/hidden-lineups";
 import { useToast } from "@/components/toast";
 import {
@@ -66,25 +67,45 @@ export function LineupCard({
 
   return (
     <>
-      <div className="group relative flex min-w-[280px] flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted">
-        <button
-          type="button"
-          onClick={onHide}
-          title="Hide this lineup"
-          aria-label="Hide this lineup"
-          className="absolute right-1.5 top-1.5 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-60 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        >
-          <EyeOff className="h-4 w-4" aria-hidden />
-        </button>
-        <Link
-          href={`/lineup/${lineup.id}`}
-          className="block pl-1 pr-9 pb-2 pt-1 hover:opacity-90"
-          title={summaryTitle(abilities, textPrimary, secondary) || "Edit lineup"}
-        >
+      <div className="flex min-w-[280px] flex-col rounded-lg border border-border bg-card p-3">
+        <div className="pl-1 pb-2 pt-1">
           {isEmpty ? (
-            <span className="text-sm italic text-muted-foreground/60">
-              no summary
-            </span>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm italic text-muted-foreground/60">
+                no summary
+              </span>
+              <div className="flex shrink-0 flex-col gap-1">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        onClick={onHide}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      />
+                    }
+                  >
+                    <EyeOff className="h-3.5 w-3.5" aria-hidden />
+                    Hide
+                  </TooltipTrigger>
+                  <TooltipContent side="left">Hide this lineup (only for you!)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Link
+                        href={`/lineup/${lineup.id}`}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      />
+                    }
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
+                    Edit
+                  </TooltipTrigger>
+                  <TooltipContent side="left">Edit this lineup</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
           ) : (
             // Ability icons sit in a left column sized to fill the combined
             // height of the title + secondary rows; notes (secondary) live in
@@ -121,32 +142,65 @@ export function LineupCard({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                {textPrimary.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-x-2 text-lg font-medium leading-tight text-foreground">
-                    {textPrimary.map((value, i) => (
-                      <span key={i} className="contents">
-                        {i > 0 && (
-                          <span
-                            aria-hidden
-                            className="text-muted-foreground/70"
-                          >
-                            |
-                          </span>
-                        )}
-                        <span className="truncate">{value}</span>
-                      </span>
-                    ))}
+                <div className="flex items-center gap-2">
+                  {textPrimary.length > 0 ? (
+                    <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 text-lg font-medium leading-tight text-foreground">
+                      {textPrimary.map((value, i) => (
+                        <span key={i} className="contents">
+                          {i > 0 && (
+                            <span
+                              aria-hidden
+                              className="text-muted-foreground/70"
+                            >
+                              |
+                            </span>
+                          )}
+                          <span className="truncate">{value}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="min-w-0 flex-1" />
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          type="button"
+                          onClick={onHide}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        />
+                      }
+                    >
+                      <EyeOff className="h-3.5 w-3.5" aria-hidden />
+                      Hide
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Hide this lineup (only for you!)</TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                    {secondary.length > 0 ? secondary.join(" · ") : " "}
                   </div>
-                )}
-                {/* Always render the secondary line so cards with vs. without
-                    notes align vertically when laid out side-by-side. */}
-                <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                  {secondary.length > 0 ? secondary.join(" · ") : " "}
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Link
+                          href={`/lineup/${lineup.id}`}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                        />
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
+                      Edit
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Edit this lineup</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>
           )}
-        </Link>
+        </div>
         <div className="flex gap-3">
           {lineup.images.map((img, i) => (
             <LineupImageItem
@@ -177,13 +231,16 @@ function LineupImageItem({
 }) {
   const bulkPin = useAllLocalZoom();
   const [hovered, setHovered] = useState(false);
-  const [pinned, setPinned] = useState(false);
+  const [pinned, setPinned] = useState(bulkPin);
   const [prevBulkPin, setPrevBulkPin] = useState(bulkPin);
   const [loaded, setLoaded] = useState(false);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const showZoom = loaded && (hovered || pinned);
-  const showPin = loaded && (hovered || pinned);
+  const figRef = useRef<HTMLElement>(null);
+  const [figDims, setFigDims] = useState<{ w: number; h: number; r: number } | null>(null);
+  const zoomEnabled = image.zoom_enabled !== false;
+  const showZoom = loaded && (hovered || pinned) && zoomEnabled;
+  const showPin = loaded && (hovered || pinned) && zoomEnabled;
 
   const isCropped =
     image.crop_x !== undefined &&
@@ -224,8 +281,48 @@ function LineupImageItem({
     }
   }, []);
 
+  useEffect(() => {
+    const el = figRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      const r = Math.max(28, Math.min(110, h * 0.3));
+      if (w > 0 && h > 0) setFigDims({ w, h, r });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const connector = (() => {
+    if (!figDims || !showZoom) return null;
+    const cxPx = figDims.r;
+    const cyPx = figDims.h / 2;
+    const zxPx = (zfx / 100) * figDims.w;
+    const zyPx = (zfy / 100) * figDims.h;
+    const dx = zxPx - cxPx;
+    const dy = zyPx - cyPx;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d <= figDims.r * 1.1) return null;
+    const theta = Math.atan2(dy, dx);
+    const alpha = Math.acos(figDims.r / d);
+    return {
+      t1x: cxPx + figDims.r * Math.cos(theta + alpha),
+      t1y: cyPx + figDims.r * Math.sin(theta + alpha),
+      t2x: cxPx + figDims.r * Math.cos(theta - alpha),
+      t2y: cyPx + figDims.r * Math.sin(theta - alpha),
+      zx: zxPx,
+      zy: zyPx,
+      vw: figDims.w,
+      vh: figDims.h,
+    };
+  })();
+
   return (
     <figure
+      ref={figRef}
       className="relative flex shrink-0 overflow-hidden"
       style={
         {
@@ -288,12 +385,41 @@ function LineupImageItem({
           onOpenFullscreen(image.url);
         }}
       />
+      {loaded && !showZoom && zoomEnabled && <ZoomCrosshair x={zfx} y={zfy} />}
       {showZoom && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded">
+          {connector && (
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox={`0 0 ${connector.vw} ${connector.vh}`}
+              fill="none"
+            >
+              <line
+                x1={connector.t1x} y1={connector.t1y}
+                x2={connector.zx} y2={connector.zy}
+                stroke="rgba(0,0,0,0.25)" strokeWidth="3"
+              />
+              <line
+                x1={connector.t2x} y1={connector.t2y}
+                x2={connector.zx} y2={connector.zy}
+                stroke="rgba(0,0,0,0.25)" strokeWidth="3"
+              />
+              <line
+                x1={connector.t1x} y1={connector.t1y}
+                x2={connector.zx} y2={connector.zy}
+                stroke="rgba(255,255,255,0.5)" strokeWidth="1"
+              />
+              <line
+                x1={connector.t2x} y1={connector.t2y}
+                x2={connector.zx} y2={connector.zy}
+                stroke="rgba(255,255,255,0.5)" strokeWidth="1"
+              />
+            </svg>
+          )}
           <div
             className="absolute inset-0"
             style={{
-              clipPath: `circle(var(--lz-radius) at ${zfx}% ${zfy}%)`,
+              clipPath: "circle(var(--lz-radius) at var(--lz-radius) 50%)",
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -304,8 +430,8 @@ function LineupImageItem({
               className="object-contain"
               style={{
                 position: "absolute",
-                left: `${((zxImg * (1 - ZOOM_FACTOR) - cx) * 100) / cw}%`,
-                top: `${((zyImg * (1 - ZOOM_FACTOR) - cy) * 100) / ch}%`,
+                left: `calc(var(--lz-radius) - ${(zxImg * ZOOM_FACTOR * 100) / cw}%)`,
+                top: `${50 - (zyImg * ZOOM_FACTOR * 100) / ch}%`,
                 width: `${(ZOOM_FACTOR * 10000) / cw}%`,
                 height: `${(ZOOM_FACTOR * 10000) / ch}%`,
                 maxWidth: "none",
@@ -314,20 +440,30 @@ function LineupImageItem({
             />
           </div>
           <div
-            className="absolute rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
+            className="absolute overflow-hidden rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
             style={{
-              left: `${zfx}%`,
-              top: `${zfy}%`,
+              left: "var(--lz-radius)",
+              top: "50%",
               transform: "translate(-50%, -50%)",
               width: "calc(var(--lz-radius) * 2)",
               height: "calc(var(--lz-radius) * 2)",
             }}
-          />
+          >
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox="0 0 100 100"
+            >
+              <polygon points="47,0 53,0 50,7.5" fill="white" fillOpacity="0.85" />
+              <polygon points="47,100 53,100 50,92.5" fill="white" fillOpacity="0.85" />
+              <polygon points="0,47 0,53 7.5,50" fill="white" fillOpacity="0.85" />
+              <polygon points="100,47 100,53 92.5,50" fill="white" fillOpacity="0.85" />
+            </svg>
+          </div>
         </div>
       )}
       {showPin && (
         <label
-          className="absolute left-2 top-2 inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-black/55 px-2 py-0.5 text-sm font-medium text-white"
+          className="absolute right-2 top-2 inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-black/55 px-2 py-0.5 text-sm font-medium text-white"
           style={{ textShadow: LABEL_TEXT_SHADOW }}
           title="Keep the local zoom on for this image"
         >
@@ -338,8 +474,16 @@ function LineupImageItem({
             className="h-3 w-3 cursor-pointer accent-primary"
             aria-label="Pin local zoom"
           />
-          <span>Pin zoom</span>
+          <span>Pin zoom circle</span>
         </label>
+      )}
+      {loaded && hovered && !zoomEnabled && (
+        <span
+          className="absolute right-2 top-2 inline-flex select-none items-center rounded-md bg-black/55 px-2 py-0.5 text-sm font-medium text-white"
+          style={{ textShadow: LABEL_TEXT_SHADOW }}
+        >
+          No zoom circle (edit to enable)
+        </span>
       )}
       {image.label && (
         <figcaption

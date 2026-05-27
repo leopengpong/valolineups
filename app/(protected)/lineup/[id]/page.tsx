@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { attachSignedUrls } from "@/lib/lineups";
 import { listAgents, listFields, listMaps } from "@/lib/data/reference";
-import { BackButton } from "@/components/back-button";
 import { LineupForm } from "@/components/lineup-form";
 import type { Lineup } from "@/lib/types";
 
@@ -34,7 +33,7 @@ export default async function EditLineupPage({ params }: { params: Params }) {
       existingPath: img.path,
       previewUrl: img.url,
       label: img.label,
-      customZoom: img.zoom_x !== undefined || img.zoom_y !== undefined,
+      zoomEnabled: img.zoom_enabled ?? true,
       zoomX: img.zoom_x,
       zoomY: img.zoom_y,
       customCrop:
@@ -53,12 +52,6 @@ export default async function EditLineupPage({ params }: { params: Params }) {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6">
-      <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold">Edit lineup</h1>
-        <BackButton className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-          ← Back
-        </BackButton>
-      </div>
       <LineupForm
         maps={maps}
         agents={agents}

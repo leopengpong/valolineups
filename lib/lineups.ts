@@ -78,13 +78,17 @@ export function normalizeImages(images: unknown): LineupImage[] {
         img !== null &&
         typeof (img as { path?: unknown }).path === "string",
     )
-    .slice(0, 3)
+    .slice(0, 5)
     .map((img, i) => {
       const out: LineupImage = {
         path: img.path,
         label: typeof img.label === "string" ? img.label : undefined,
         order: typeof img.order === "number" ? img.order : i,
       };
+      const ze = (img as { zoom_enabled?: unknown }).zoom_enabled;
+      if (ze === false) {
+        out.zoom_enabled = false;
+      }
       const zx = (img as { zoom_x?: unknown }).zoom_x;
       const zy = (img as { zoom_y?: unknown }).zoom_y;
       if (typeof zx === "number" && Number.isFinite(zx)) {

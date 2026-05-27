@@ -51,7 +51,7 @@ export function LocalZoomToggle() {
         className="h-3 w-3 cursor-pointer accent-primary"
         aria-label="Show local zoom on every image"
       />
-      <span className="leading-none">All zoom circles</span>
+      <span className="leading-none">Pin all zoom circles</span>
     </label>
   );
 }

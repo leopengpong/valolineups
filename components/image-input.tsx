@@ -1,6 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,36 +27,26 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { blobToImageFile } from "@/lib/image";
+import { ZoomCrosshair } from "@/components/zoom-crosshair";
 
 export type ImageItem = {
-  // For newly-added images.
   file?: File;
-  previewUrl: string; // object URL for new files, signed URL for existing.
-  // For existing images already in Storage.
+  previewUrl: string;
   existingPath?: string;
   label?: string;
-  // Per-image local-zoom anchor. When `customZoom` is true the image saves
-  // its zoom_x/zoom_y; when false it falls back to dead-center (50/50) at
-  // render time. When `customCrop` is also true, the zoom point is kept
-  // inside the crop rectangle.
-  customZoom?: boolean;
-  zoomX?: number; // 0-100
-  zoomY?: number; // 0-100
-  // Per-image crop rectangle. When `customCrop` is true the image saves
-  // its crop_x/y/w/h; when false the full image is shown on the cheat sheet.
+  zoomEnabled?: boolean;
+  zoomX?: number;
+  zoomY?: number;
   customCrop?: boolean;
-  cropX?: number; // 0-100, left edge
-  cropY?: number; // 0-100, top edge
-  cropW?: number; // 0-100, width
-  cropH?: number; // 0-100, height
+  cropX?: number;
+  cropY?: number;
+  cropW?: number;
+  cropH?: number;
 };
 
-const MAX_IMAGES = 3;
+const MAX_IMAGES = 5;
 
-// Min crop dimension (% of image) — prevents corners from collapsing.
 const MIN_CROP = 5;
-// Default crop when "Custom crop" is first toggled on — slightly inset so the
-// corner handles are visible inside the image.
 const DEFAULT_CROP = { x: 5, y: 5, w: 90, h: 90 };
 
 export function ImageInput({
@@ -71,7 +79,6 @@ export function ImageInput({
     [onChange, remaining, value],
   );
 
-  // Revoke object URLs we created.
   useEffect(() => {
     return () => {
       for (const item of value) {
@@ -80,11 +87,9 @@ export function ImageInput({
         }
       }
     };
-    // intentionally only on unmount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Paste handler.
   useEffect(() => {
     function onPaste(e: ClipboardEvent) {
       if (!e.clipboardData) return;
@@ -115,12 +120,20 @@ export function ImageInput({
     addFiles(files);
   }
 
-  function move(idx: number, delta: number) {
-    const target = idx + delta;
-    if (target < 0 || target >= value.length) return;
-    const next = value.slice();
-    [next[idx], next[target]] = [next[target], next[idx]];
-    onChange(next);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = value.findIndex((item) => item.previewUrl === active.id);
+    const newIndex = value.findIndex((item) => item.previewUrl === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    onChange(arrayMove(value, oldIndex, newIndex));
   }
 
   function remove(idx: number) {
@@ -139,24 +152,26 @@ export function ImageInput({
     onChange(next);
   }
 
-  function toggleCustomZoom(idx: number, on: boolean) {
+  function toggleZoomEnabled(idx: number, on: boolean) {
+    const next = value.slice();
+    next[idx] = { ...next[idx], zoomEnabled: on };
+    onChange(next);
+  }
+
+  function resetZoom(idx: number) {
     const next = value.slice();
     const cur = next[idx];
-    if (on) {
-      let zx = cur.zoomX ?? 50;
-      let zy = cur.zoomY ?? 50;
-      if (cur.customCrop) {
-        const cx = cur.cropX ?? 0;
-        const cy = cur.cropY ?? 0;
-        const cw = cur.cropW ?? 100;
-        const ch = cur.cropH ?? 100;
-        zx = clamp(zx, cx, cx + cw);
-        zy = clamp(zy, cy, cy + ch);
-      }
-      next[idx] = { ...cur, customZoom: true, zoomX: zx, zoomY: zy };
-    } else {
-      next[idx] = { ...cur, customZoom: false };
+    let zx = 50;
+    let zy = 50;
+    if (cur.customCrop) {
+      const cx = cur.cropX ?? 0;
+      const cy = cur.cropY ?? 0;
+      const cw = cur.cropW ?? 100;
+      const ch = cur.cropH ?? 100;
+      zx = cx + cw / 2;
+      zy = cy + ch / 2;
     }
+    next[idx] = { ...cur, zoomX: zx, zoomY: zy };
     onChange(next);
   }
 
@@ -187,10 +202,8 @@ export function ImageInput({
       const ch = cur.cropH ?? DEFAULT_CROP.h;
       let zx = cur.zoomX ?? 50;
       let zy = cur.zoomY ?? 50;
-      if (cur.customZoom) {
-        zx = clamp(zx, cx, cx + cw);
-        zy = clamp(zy, cy, cy + ch);
-      }
+      zx = clamp(zx, cx, cx + cw);
+      zy = clamp(zy, cy, cy + ch);
       next[idx] = {
         ...cur,
         customCrop: true,
@@ -218,10 +231,8 @@ export function ImageInput({
     const cur = next[idx];
     let zx = cur.zoomX ?? 50;
     let zy = cur.zoomY ?? 50;
-    if (cur.customZoom) {
-      zx = clamp(zx, cx, cx + cw);
-      zy = clamp(zy, cy, cy + ch);
-    }
+    zx = clamp(zx, cx, cx + cw);
+    zy = clamp(zy, cy, cy + ch);
     next[idx] = {
       ...cur,
       cropX: cx,
@@ -280,122 +291,181 @@ export function ImageInput({
       )}
 
       {value.length > 0 && (
-        <>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {value.map((item, i) => (
-              <li
-                key={`${item.previewUrl}-${i}`}
-                className="space-y-2 overflow-hidden rounded-lg border border-border bg-card p-2"
-              >
-                <ImagePreview
-                  src={item.previewUrl}
-                  alt={item.label || `image ${i + 1}`}
-                  customZoom={item.customZoom ?? false}
-                  zoomX={item.zoomX ?? 50}
-                  zoomY={item.zoomY ?? 50}
-                  onChangeZoom={(x, y) => setZoom(i, x, y)}
-                  customCrop={item.customCrop ?? false}
-                  cropX={item.cropX ?? DEFAULT_CROP.x}
-                  cropY={item.cropY ?? DEFAULT_CROP.y}
-                  cropW={item.cropW ?? DEFAULT_CROP.w}
-                  cropH={item.cropH ?? DEFAULT_CROP.h}
-                  onChangeCrop={(x, y, w, h) => setCrop(i, x, y, w, h)}
-                />
-                <Input
-                  value={item.label ?? ""}
-                  onChange={(e) => setLabel(i, e.target.value)}
-                  placeholder="Label (optional)"
-                  className="h-7"
-                />
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="ghost"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="ghost"
-                      onClick={() => move(i, 1)}
-                      disabled={i === value.length - 1}
-                    >
-                      →
-                    </Button>
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground" />
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.customCrop ?? false}
-                        onChange={(e) => toggleCustomCrop(i, e.target.checked)}
-                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
+        <DndContext
+          id="image-sort"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={value.map((item) => item.previewUrl)}
+            strategy={rectSortingStrategy}
+          >
+            <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+              {value.map((item, i) => (
+                <SortableCard key={item.previewUrl} id={item.previewUrl}>
+                  {(handleProps) => (
+                    <>
+                      <ImagePreview
+                        src={item.previewUrl}
+                        alt={item.label || `image ${i + 1}`}
+                        zoomEnabled={item.zoomEnabled ?? true}
+                        zoomX={item.zoomX ?? 50}
+                        zoomY={item.zoomY ?? 50}
+                        onChangeZoom={(x, y) => setZoom(i, x, y)}
+                        customCrop={item.customCrop ?? false}
+                        cropX={item.cropX ?? DEFAULT_CROP.x}
+                        cropY={item.cropY ?? DEFAULT_CROP.y}
+                        cropW={item.cropW ?? DEFAULT_CROP.w}
+                        cropH={item.cropH ?? DEFAULT_CROP.h}
+                        onChangeCrop={(x, y, w, h) => setCrop(i, x, y, w, h)}
+                        columnIndex={i}
                       />
-                      <span>Custom crop</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Cropping is encouraged to maximize space on the cheat sheet
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground" />
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.customZoom ?? false}
-                        onChange={(e) => toggleCustomZoom(i, e.target.checked)}
-                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
-                      />
-                      <span>Custom zoom point</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Custom local zoom circle (unchecked defaults to center)
-                    </TooltipContent>
-                  </Tooltip>
-                  <span className="ml-auto" />
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="destructive"
-                    onClick={() => remove(i)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
+                      <div className="flex items-center gap-2">
+                        <div
+                          {...handleProps}
+                          className="flex cursor-grab touch-none items-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                        >
+                          <GripVertical className="h-5 w-5" />
+                        </div>
+                        <Input
+                          value={item.label ?? ""}
+                          onChange={(e) => setLabel(i, e.target.value)}
+                          placeholder="Label (optional)"
+                          className="h-7"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground" />
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              checked={item.customCrop ?? false}
+                              onChange={(e) =>
+                                toggleCustomCrop(i, e.target.checked)
+                              }
+                              className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                            />
+                            <span>Custom crop</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Cropping is encouraged to maximize space on the cheat
+                            sheet
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <label className="inline-flex cursor-pointer select-none items-center gap-1.5 text-sm text-foreground" />
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              checked={item.zoomEnabled ?? true}
+                              onChange={(e) =>
+                                toggleZoomEnabled(i, e.target.checked)
+                              }
+                              className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                            />
+                            <span>Enable large crosshair + zoom point</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Show zoom circle on hover in cheat sheet view
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="destructive"
+                          onClick={() => remove(i)}
+                        >
+                          Remove
+                        </Button>
+                        {(item.zoomEnabled ?? true) && (
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="outline"
+                            onClick={() => resetZoom(i)}
+                          >
+                            Reset crosshair + zoom point to center
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </SortableCard>
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
 }
 
-// Zoom-factor and indicator radius mirror the cheat-sheet (lineup-card.tsx)
-// so the editor preview matches what users see at render time.
+function SortableCard({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handleProps: Record<string, unknown>) => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      className="space-y-2 overflow-visible rounded-lg border border-border bg-card p-2"
+    >
+      {children({ ...attributes, ...listeners })}
+    </li>
+  );
+}
+
+function subscribeSm(cb: () => void) {
+  const mq = window.matchMedia("(min-width: 640px)");
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+function getSmSnapshot(): boolean {
+  return window.matchMedia("(min-width: 640px)").matches;
+}
+
+function getSmServerSnapshot(): boolean {
+  return false;
+}
+
 const ZOOM_FACTOR = 2.5;
+const CROSSHAIR_HIT_RADIUS = 39;
 
 type DragMode =
   | null
-  | { kind: "zoom" }
+  | { kind: "crosshair"; offsetX: number; offsetY: number }
   | { kind: "crop"; corner: "nw" | "ne" | "sw" | "se" };
 
 function ImagePreview({
   src,
   alt,
-  customZoom,
+  zoomEnabled,
   zoomX,
   zoomY,
   onChangeZoom,
@@ -405,10 +475,11 @@ function ImagePreview({
   cropW,
   cropH,
   onChangeCrop,
+  columnIndex,
 }: {
   src: string;
   alt: string;
-  customZoom: boolean;
+  zoomEnabled: boolean;
   zoomX: number;
   zoomY: number;
   onChangeZoom: (x: number, y: number) => void;
@@ -418,25 +489,121 @@ function ImagePreview({
   cropW: number;
   cropH: number;
   onChangeCrop: (x: number, y: number, w: number, h: number) => void;
+  columnIndex: number;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const dragRef = useRef<DragMode>(null);
   const [loaded, setLoaded] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [hoveringCrosshair, setHoveringCrosshair] = useState(false);
+  const [hoveringImage, setHoveringImage] = useState(false);
+  const hoveringRef = useRef(false);
 
-  // Keep the latest crop in a ref so the drag handlers compute against the
-  // committed value at each move rather than a stale closure.
   const cropRef = useRef({ x: cropX, y: cropY, w: cropW, h: cropH });
   useEffect(() => {
     cropRef.current = { x: cropX, y: cropY, w: cropW, h: cropH };
   }, [cropX, cropY, cropW, cropH]);
 
-  // If the image was already cached, `onLoad` may have fired before this
-  // component mounted — sync the loaded flag on mount so we drop the skeleton.
   useEffect(() => {
     const el = imgRef.current;
     if (el?.complete && (el.naturalWidth ?? 0) > 0) setLoaded(true);
   }, []);
+
+  const showZoomPanel = zoomEnabled && loaded;
+
+  const wideEnough = useSyncExternalStore(subscribeSm, getSmSnapshot, getSmServerSnapshot);
+  const circleOnRight = !wideEnough || columnIndex % 2 === 0;
+
+  const [dims, setDims] = useState<{
+    containerW: number;
+    containerH: number;
+    circleCx: number;
+    circleCy: number;
+    circleR: number;
+    imageLeft: number;
+    imageTop: number;
+    imageW: number;
+    imageH: number;
+  } | null>(null);
+
+  const measure = useCallback(() => {
+    const cont = containerRef.current;
+    const imgWrap = wrapperRef.current;
+    if (!cont || !imgWrap) {
+      setDims(null);
+      return;
+    }
+    const contRect = cont.getBoundingClientRect();
+    const imgRect = imgWrap.getBoundingClientRect();
+    if (imgRect.width === 0 || imgRect.height === 0) {
+      setDims(null);
+      return;
+    }
+    const r = Math.max(28, Math.min(110, imgRect.height * 0.3));
+    const gap = 4;
+    setDims({
+      containerW: contRect.width,
+      containerH: contRect.height,
+      circleCx: circleOnRight ? contRect.width + gap + r : -(gap + r),
+      circleCy: contRect.height / 2,
+      circleR: r,
+      imageLeft: imgRect.left - contRect.left,
+      imageTop: imgRect.top - contRect.top,
+      imageW: imgRect.width,
+      imageH: imgRect.height,
+    });
+  }, [circleOnRight]);
+
+  useEffect(() => {
+    const cont = containerRef.current;
+    if (!cont) return;
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(cont);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  useEffect(measure, [loaded, zoomEnabled, circleOnRight, measure]);
+
+  const connector = useMemo(() => {
+    if (!dims || !showZoomPanel) return null;
+    const crossX = dims.imageLeft + (zoomX / 100) * dims.imageW;
+    const crossY = dims.imageTop + (zoomY / 100) * dims.imageH;
+    const dx = crossX - dims.circleCx;
+    const dy = crossY - dims.circleCy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d <= dims.circleR * 1.1) return null;
+    const theta = Math.atan2(dy, dx);
+    const alpha = Math.acos(Math.min(1, dims.circleR / d));
+    return {
+      t1x: dims.circleCx + dims.circleR * Math.cos(theta + alpha),
+      t1y: dims.circleCy + dims.circleR * Math.sin(theta + alpha),
+      t2x: dims.circleCx + dims.circleR * Math.cos(theta - alpha),
+      t2y: dims.circleCy + dims.circleR * Math.sin(theta - alpha),
+      zx: crossX,
+      zy: crossY,
+      vw: dims.containerW,
+      vh: dims.containerH,
+    };
+  }, [dims, showZoomPanel, zoomX, zoomY]);
+
+  const zoomImgStyle = useMemo((): React.CSSProperties | null => {
+    if (!dims || dims.circleR <= 0) return null;
+    const circleDiam = dims.circleR * 2;
+    const scaleW = ((dims.imageW * ZOOM_FACTOR) / circleDiam) * 100;
+    const scaleH = ((dims.imageH * ZOOM_FACTOR) / circleDiam) * 100;
+    return {
+      position: "absolute",
+      width: `${scaleW}%`,
+      height: `${scaleH}%`,
+      left: `${50 - (zoomX / 100) * scaleW}%`,
+      top: `${50 - (zoomY / 100) * scaleH}%`,
+      maxWidth: "none",
+      maxHeight: "none",
+    };
+  }, [dims, zoomX, zoomY]);
 
   const pctFromClient = useCallback((clientX: number, clientY: number) => {
     const rect = wrapperRef.current?.getBoundingClientRect();
@@ -453,11 +620,13 @@ function ImagePreview({
       if (!drag) return;
       const p = pctFromClient(clientX, clientY);
       if (!p) return;
-      if (drag.kind === "zoom") {
-        onChangeZoom(p.x, p.y);
+      if (drag.kind === "crosshair") {
+        onChangeZoom(
+          clamp(p.x - drag.offsetX, 0, 100),
+          clamp(p.y - drag.offsetY, 0, 100),
+        );
         return;
       }
-      // crop corner drag — compute new rectangle for the dragged corner.
       const cur = cropRef.current;
       let x = cur.x;
       let y = cur.y;
@@ -483,7 +652,6 @@ function ImagePreview({
         h = ny2 - cur.y;
         x = nx;
       } else {
-        // 'se'
         const nx2 = clamp(p.x, cur.x + MIN_CROP, 100);
         const ny2 = clamp(p.y, cur.y + MIN_CROP, 100);
         w = nx2 - cur.x;
@@ -508,21 +676,67 @@ function ImagePreview({
       dragRef.current = { kind: "crop", corner };
       return;
     }
-    if (!customZoom) return;
+    if (!zoomEnabled) return;
+    if (
+      !wrapperRef.current ||
+      !isOverCrosshair(e.clientX, e.clientY, wrapperRef.current, zoomX, zoomY)
+    )
+      return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = { kind: "zoom" };
-    applyDrag(e.clientX, e.clientY);
+    const p = pctFromClient(e.clientX, e.clientY);
+    if (!p) return;
+    dragRef.current = {
+      kind: "crosshair",
+      offsetX: p.x - zoomX,
+      offsetY: p.y - zoomY,
+    };
+    setDragging(true);
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current) return;
-    applyDrag(e.clientX, e.clientY);
+    if (dragRef.current) {
+      applyDrag(e.clientX, e.clientY);
+      return;
+    }
+    if (zoomEnabled && wrapperRef.current) {
+      const over = isOverCrosshair(
+        e.clientX,
+        e.clientY,
+        wrapperRef.current,
+        zoomX,
+        zoomY,
+      );
+      if (over !== hoveringRef.current) {
+        hoveringRef.current = over;
+        setHoveringCrosshair(over);
+      }
+    }
   };
 
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
+    const wasDragKind = dragRef.current.kind;
     dragRef.current = null;
+    setDragging(false);
+    if (wasDragKind === "crosshair" && wrapperRef.current) {
+      const over = isOverCrosshair(
+        e.clientX,
+        e.clientY,
+        wrapperRef.current,
+        zoomX,
+        zoomY,
+      );
+      hoveringRef.current = over;
+      setHoveringCrosshair(over);
+    }
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (rect) {
+      setHoveringImage(
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom,
+      );
+    }
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {
@@ -531,111 +745,192 @@ function ImagePreview({
   };
 
   return (
-    <div
-      ref={wrapperRef}
-      className={
-        "relative select-none touch-none " +
-        (customZoom ? "cursor-crosshair" : "")
-      }
-      style={
-        {
-          // Roughly mirrors the cheat-sheet's `30% of image height` formula:
-          // for a 16:9 image rendered at the wrapper width, height = width *
-          // 9/16, so 30% of height ≈ 17% of width. We push slightly above
-          // that with an 80px floor so the picker feels comfortably draggable
-          // on the smaller single-column phone layout too.
-          "--zoom-picker-radius": "clamp(80px, 18%, 110px)",
-          // Reserve a 16:9 box while loading so cards keep their shape and
-          // images don't pop in. Once loaded the image's natural ratio takes
-          // over.
-          aspectRatio: loaded ? undefined : "16 / 9",
-        } as React.CSSProperties
-      }
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        draggable={false}
-        onLoad={() => setLoaded(true)}
+    <div ref={containerRef} className="relative" style={showZoomPanel && (hoveringImage || dragging) ? { zIndex: 10 } : undefined}>
+      <div
+        ref={wrapperRef}
         className={
-          "block w-full rounded transition-opacity duration-150 " +
-          (loaded ? "opacity-100" : "opacity-0")
+          "relative select-none touch-none " +
+          (dragging
+            ? "cursor-grabbing"
+            : hoveringCrosshair && zoomEnabled
+              ? "cursor-grab"
+              : "")
         }
-      />
-      {/* Clip layer: holds the skeleton, zoom indicator, and crop dimming so
-          their bounds stay inside the image. Crop corner handles are siblings
-          of this div so they remain fully visible when dragged to 0%/100%. */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded">
-        {!loaded && (
-          <div
-            aria-hidden
-            className="absolute inset-0 animate-pulse rounded border border-border/60 bg-muted"
-          />
-        )}
-        {customZoom && loaded && (
-          <>
-            {/* Clipped, magnified copy — same math as the cheat-sheet zoom. */}
+        style={{ aspectRatio: loaded ? undefined : "16 / 9" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerEnter={() => setHoveringImage(true)}
+        onPointerLeave={() => {
+          if (!dragRef.current) {
+            hoveringRef.current = false;
+            setHoveringCrosshair(false);
+            setHoveringImage(false);
+          }
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          draggable={false}
+          onLoad={() => setLoaded(true)}
+          className={
+            "block w-full rounded transition-opacity duration-150 " +
+            (loaded ? "opacity-100" : "opacity-0")
+          }
+        />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded">
+          {!loaded && (
             <div
-              className="absolute inset-0"
+              aria-hidden
+              className="absolute inset-0 animate-pulse rounded border border-border/60 bg-muted"
+            />
+          )}
+          {customCrop && loaded && (
+            <div
+              className="absolute outline outline-2 outline-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
               style={{
-                clipPath: `circle(var(--zoom-picker-radius) at ${zoomX}% ${zoomY}%)`,
+                left: `${cropX}%`,
+                top: `${cropY}%`,
+                width: `${cropW}%`,
+                height: `${cropH}%`,
               }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={src}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="object-contain"
-                style={{
-                  position: "absolute",
-                  left: `${(1 - ZOOM_FACTOR) * zoomX}%`,
-                  top: `${(1 - ZOOM_FACTOR) * zoomY}%`,
-                  width: `${ZOOM_FACTOR * 100}%`,
-                  height: `${ZOOM_FACTOR * 100}%`,
-                  maxWidth: "none",
-                  maxHeight: "none",
-                }}
-              />
-            </div>
+            />
+          )}
+          {zoomEnabled && loaded && <ZoomCrosshair x={zoomX} y={zoomY} />}
+        </div>
+        {zoomEnabled && loaded && (
+          <>
             <div
-              className="absolute rounded-full border-2 border-white/90 shadow-[0_0_10px_rgba(0,0,0,0.55)]"
+              className="pointer-events-none absolute rounded-full"
               style={{
                 left: `${zoomX}%`,
                 top: `${zoomY}%`,
+                width: CROSSHAIR_HIT_RADIUS * 2,
+                height: CROSSHAIR_HIT_RADIUS * 2,
                 transform: "translate(-50%, -50%)",
-                width: "calc(var(--zoom-picker-radius) * 2)",
-                height: "calc(var(--zoom-picker-radius) * 2)",
+                border: "1.5px solid rgba(255,255,255,0.85)",
+                boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
               }}
             />
+            <div
+              className="pointer-events-none absolute whitespace-nowrap text-xs font-medium"
+              style={{
+                left: `${zoomX}%`,
+                top: `${zoomY}%`,
+                transform: `translate(-50%, ${CROSSHAIR_HIT_RADIUS + 4}px)`,
+                color: "white",
+                textShadow:
+                  "0 1px 3px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9)",
+              }}
+            >
+              Click + drag me!
+            </div>
           </>
         )}
         {customCrop && loaded && (
-          <div
-            className="absolute outline outline-2 outline-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
-            style={{
-              left: `${cropX}%`,
-              top: `${cropY}%`,
-              width: `${cropW}%`,
-              height: `${cropH}%`,
-            }}
-          />
+          <>
+            <CropCorner corner="nw" x={cropX} y={cropY} />
+            <CropCorner corner="ne" x={cropX + cropW} y={cropY} />
+            <CropCorner corner="sw" x={cropX} y={cropY + cropH} />
+            <CropCorner corner="se" x={cropX + cropW} y={cropY + cropH} />
+          </>
         )}
       </div>
-      {customCrop && loaded && (
-        <>
-          <CropCorner corner="nw" x={cropX} y={cropY} />
-          <CropCorner corner="ne" x={cropX + cropW} y={cropY} />
-          <CropCorner corner="sw" x={cropX} y={cropY + cropH} />
-          <CropCorner corner="se" x={cropX + cropW} y={cropY + cropH} />
-        </>
+      {showZoomPanel && (hoveringImage || dragging) && (
+        <div
+          className="pointer-events-none absolute overflow-hidden rounded-full border-2 border-white/85 shadow-[0_0_8px_rgba(0,0,0,0.4)]"
+          style={{
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: dims ? dims.circleR * 2 : 90,
+            height: dims ? dims.circleR * 2 : 90,
+            ...(circleOnRight
+              ? { left: "calc(100% + 4px)" }
+              : { right: "calc(100% + 4px)" }),
+          }}
+        >
+          {zoomImgStyle && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={src}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="object-contain"
+              style={zoomImgStyle}
+            />
+          )}
+          <svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 100 100"
+          >
+            <polygon
+              points="47,0 53,0 50,7.5"
+              fill="white"
+              fillOpacity="0.85"
+            />
+            <polygon
+              points="47,100 53,100 50,92.5"
+              fill="white"
+              fillOpacity="0.85"
+            />
+            <polygon
+              points="0,47 0,53 7.5,50"
+              fill="white"
+              fillOpacity="0.85"
+            />
+            <polygon
+              points="100,47 100,53 92.5,50"
+              fill="white"
+              fillOpacity="0.85"
+            />
+          </svg>
+        </div>
+      )}
+      {connector && (hoveringImage || dragging) && (
+        <svg
+          className="absolute inset-0 h-full w-full pointer-events-none"
+          viewBox={`0 0 ${connector.vw} ${connector.vh}`}
+          fill="none"
+          overflow="visible"
+        >
+          <line
+            x1={connector.t1x}
+            y1={connector.t1y}
+            x2={connector.zx}
+            y2={connector.zy}
+            stroke="rgba(0,0,0,0.25)"
+            strokeWidth="3"
+          />
+          <line
+            x1={connector.t2x}
+            y1={connector.t2y}
+            x2={connector.zx}
+            y2={connector.zy}
+            stroke="rgba(0,0,0,0.25)"
+            strokeWidth="3"
+          />
+          <line
+            x1={connector.t1x}
+            y1={connector.t1y}
+            x2={connector.zx}
+            y2={connector.zy}
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth="1"
+          />
+          <line
+            x1={connector.t2x}
+            y1={connector.t2y}
+            x2={connector.zx}
+            y2={connector.zy}
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth="1"
+          />
+        </svg>
       )}
     </div>
   );
@@ -671,6 +966,22 @@ function CropCorner({
       }}
     />
   );
+}
+
+function isOverCrosshair(
+  clientX: number,
+  clientY: number,
+  wrapperEl: HTMLElement,
+  zoomXPct: number,
+  zoomYPct: number,
+): boolean {
+  const rect = wrapperEl.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  const cx = (zoomXPct / 100) * rect.width;
+  const cy = (zoomYPct / 100) * rect.height;
+  const dx = clientX - rect.left - cx;
+  const dy = clientY - rect.top - cy;
+  return dx * dx + dy * dy <= CROSSHAIR_HIT_RADIUS * CROSSHAIR_HIT_RADIUS;
 }
 
 function clamp(n: number, min = 0, max = 100): number {
