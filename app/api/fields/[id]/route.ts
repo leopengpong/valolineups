@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, ctx: RouteCtx) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   const { id } = await ctx.params;
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const update: Record<string, unknown> = {};
@@ -22,21 +25,28 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   return NextResponse.json({ ok: true });
 }
 
-// Hard delete: strip the key from every lineup's custom_fields jsonb, then
-// delete the field_definitions row. Single-user / small-dataset: a JS scan is
-// fine in lieu of a Postgres function.
+// Hard delete: atomically strips the key from every lineup's custom_fields
+// and removes the field_definitions row via a Postgres RPC.
 export async function DELETE(_req: Request, ctx: RouteCtx) {
+  const authErr = await requireAuth(_req);
+  if (authErr) return authErr;
+
   const { id } = await ctx.params;
   const supabase = getServerSupabase();
 
-  const { data: row, error: fetchErr } = await supabase
-    .from("field_definitions")
-    .select("key")
-    .eq("id", id)
-    .single();
-  if (fetchErr || !row) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { error } = await supabase.rpc("delete_field_and_strip", {
+    p_field_id: id,
+  });
+
+  if (error) {
+    if (error.message.includes("not found")) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  return NextResponse.json({ ok: true });
+}
   const key = row.key as string;
 
   const { data: all, error: scanErr } = await supabase
@@ -72,6 +82,8 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
 
 // GET usage count for the confirm dialog ("This will permanently remove '<label>' data from all N lineups").
 export async function GET(_req: Request, ctx: RouteCtx) {
+  const authErr = await requireAuth(_req);
+  if (authErr) return authErr;
   const { id } = await ctx.params;
   const supabase = getServerSupabase();
   const { data: row } = await supabase

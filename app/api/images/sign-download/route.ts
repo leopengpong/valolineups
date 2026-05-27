@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { STORAGE_BUCKET } from "@/lib/types";
 
 const ONE_HOUR = 60 * 60;
 
 export async function POST(req: Request) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   let body: unknown;
   try {
     body = await req.json();

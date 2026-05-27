@@ -4,12 +4,16 @@ import {
   deleteStorageObjects,
   normalizeAbilities,
   normalizeImages,
+  sanitizeCustomFields,
 } from "@/lib/lineups";
+import { requireAuth } from "@/lib/auth";
 import type { Lineup, Side } from "@/lib/types";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, ctx: RouteCtx) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   const { id } = await ctx.params;
   let body: unknown;
   try {
@@ -74,6 +78,8 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
 }
 
 export async function DELETE(_req: Request, ctx: RouteCtx) {
+  const authErr = await requireAuth(_req);
+  if (authErr) return authErr;
   const { id } = await ctx.params;
   const supabase = getServerSupabase();
 
@@ -98,15 +104,4 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
   return NextResponse.json({ ok: true });
 }
 
-function sanitizeCustomFields(
-  input: Record<string, unknown>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(input)) {
-    // `ability` is no longer a custom field — it's the dedicated abilities[]
-    // column. Drop any incoming value so stale clients can't repopulate it.
-    if (k === "ability") continue;
-    if (typeof v === "string" && v.trim() !== "") out[k] = v;
-  }
-  return out;
-}
+

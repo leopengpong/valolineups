@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { STORAGE_BUCKET } from "@/lib/types";
 
 const MAX_COUNT = 5;
 
 export async function POST(req: Request) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   let body: unknown;
   try {
     body = await req.json();
