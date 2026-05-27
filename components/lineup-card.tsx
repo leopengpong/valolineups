@@ -543,18 +543,3 @@ function splitSummary(
   return { abilities, textPrimary, secondary };
 }
 
-// Plain-text tooltip on the card link. Joins ability names so the hover title
-// stays meaningful even when the visible row is just icons.
-function summaryTitle(
-  abilities: AgentAbility[],
-  textPrimary: string[],
-  secondary: string[],
-): string {
-  const parts: string[] = [];
-  if (abilities.length > 0) {
-    parts.push(abilities.map((a) => a.name).join(" + "));
-  }
-  for (const t of textPrimary) parts.push(t);
-  for (const v of secondary) parts.push(v);
-  return parts.join(" · ");
-}
