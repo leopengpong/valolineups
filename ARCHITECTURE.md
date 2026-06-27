@@ -1,4 +1,5 @@
 # Architecture deep dive
+<!-- docs-synced-commit: 9b101354d030e24b0762c736a2c1480afe393260 -->
 
 Reference notes for tasks that touch data fetching, cache invalidation, or the
 cheat-sheet render path. CLAUDE.md states the contracts; this file shows the

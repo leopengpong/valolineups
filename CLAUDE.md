@@ -1,5 +1,5 @@
 # CLAUDE.md
-<!-- docs-synced-commit: 6c1bd68c4c38bf186a2f97a04bd13da68cd32e66 -->
+<!-- docs-synced-commit: 9b101354d030e24b0762c736a2c1480afe393260 -->
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
