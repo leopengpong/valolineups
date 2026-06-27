@@ -27,7 +27,7 @@
   {
     "slug": "fracture",
     "name": "Fracture",
-    "in_competitive_rotation": true
+    "in_competitive_rotation": false
   },
   {
     "slug": "haven",
@@ -47,7 +47,7 @@
   {
     "slug": "pearl",
     "name": "Pearl",
-    "in_competitive_rotation": true
+    "in_competitive_rotation": false
   },
   {
     "slug": "split",
@@ -55,8 +55,13 @@
     "in_competitive_rotation": true
   },
   {
+    "slug": "summit",
+    "name": "Summit",
+    "in_competitive_rotation": true
+  },
+  {
     "slug": "sunset",
     "name": "Sunset",
-    "in_competitive_rotation": false
+    "in_competitive_rotation": true
   }
 ]
