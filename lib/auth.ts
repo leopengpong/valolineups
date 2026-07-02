@@ -50,3 +50,41 @@ export function getAuthEnv(): { password: string; secret: string } {
   }
   return { password, secret };
 }
+
+// Defense-in-depth auth check for API route handlers. The proxy middleware is
+// the primary gate; this is a fallback in case middleware is misconfigured.
+// Returns a 401 Response if the request is not authenticated, null if OK.
+// Edge-runtime safe: uses Web Crypto only.
+export async function requireAuth(req: Request): Promise<Response | null> {
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  const cookieValue = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${AUTH_COOKIE}=`))
+    ?.slice(AUTH_COOKIE.length + 1) ?? "";
+
+  if (!cookieValue) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const { password, secret } = getAuthEnv();
+    const expected = await computeAuthHash(password, secret);
+    if (!timingSafeEqualStr(cookieValue, expected)) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  } catch {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  return null;
+}

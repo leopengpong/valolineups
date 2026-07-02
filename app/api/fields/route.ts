@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 
 export async function POST(req: Request) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const key = typeof b?.key === "string" ? b.key.trim() : "";
   const label = typeof b?.label === "string" ? b.label.trim() : "";
@@ -40,6 +43,8 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const order = Array.isArray(b?.order) ? b.order : null;
   if (!order)

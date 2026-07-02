@@ -255,19 +255,20 @@ export function LineupForm({
     const supabase = getBrowserSupabase();
     const uploadedByIndex = new Map<number, string>();
 
-    for (let k = 0; k < newOnes.length; k++) {
-      const { img, i } = newOnes[k];
-      const slot = slots[k];
-      const file = img.file!;
-      const compressed = await compressImage(file);
-      const { error: upErr } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .uploadToSignedUrl(slot.path, slot.token, compressed, {
-          contentType: "image/jpeg",
-        });
-      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
-      uploadedByIndex.set(i, slot.path);
-    }
+    await Promise.all(
+      newOnes.map(async ({ img, i }, k) => {
+        const slot = slots[k];
+        const file = img.file!;
+        const compressed = await compressImage(file);
+        const { error: upErr } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .uploadToSignedUrl(slot.path, slot.token, compressed, {
+            contentType: "image/jpeg",
+          });
+        if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+        uploadedByIndex.set(i, slot.path);
+      }),
+    );
 
     return images.map((img, i) => {
       const out: {

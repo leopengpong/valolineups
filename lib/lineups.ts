@@ -130,6 +130,19 @@ function clamp01_100(n: number): number {
   return n;
 }
 
+// Strips invalid/legacy keys from custom_fields before persisting.
+// `ability` is a legacy key superseded by the dedicated abilities[] column.
+export function sanitizeCustomFields(
+  input: Record<string, unknown>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (k === "ability") continue;
+    if (typeof v === "string" && v.trim() !== "") out[k] = v;
+  }
+  return out;
+}
+
 // Returns the slot keys that are present in `input`, in canonical order, with
 // duplicates collapsed and any non-slot strings dropped. The CHECK constraint
 // on lineups.abilities depends on this same set.

@@ -5,10 +5,14 @@ import {
   listLineups,
   normalizeAbilities,
   normalizeImages,
+  sanitizeCustomFields,
 } from "@/lib/lineups";
+import { requireAuth } from "@/lib/auth";
 import type { Side } from "@/lib/types";
 
 export async function GET(req: Request) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
   const url = new URL(req.url);
   const mapSlug = url.searchParams.get("map") ?? "";
   const agentSlug = url.searchParams.get("agent") ?? "";
@@ -24,6 +28,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const authErr = await requireAuth(req);
+  if (authErr) return authErr;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -73,17 +80,4 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ id: data.id });
-}
-
-function sanitizeCustomFields(
-  input: Record<string, unknown>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(input)) {
-    // `ability` is no longer a custom field — it's the dedicated abilities[]
-    // column. Drop any incoming value so stale clients can't repopulate it.
-    if (k === "ability") continue;
-    if (typeof v === "string" && v.trim() !== "") out[k] = v;
-  }
-  return out;
 }

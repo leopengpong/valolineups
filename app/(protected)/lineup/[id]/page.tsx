@@ -30,6 +30,7 @@ export default async function EditLineupPage({ params }: { params: Params }) {
     agentSlug: withUrls.agent_slug,
     side: withUrls.side,
     images: withUrls.images.map((img) => ({
+      id: img.path,
       existingPath: img.path,
       previewUrl: img.url,
       label: img.label,

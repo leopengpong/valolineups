@@ -1,5 +1,5 @@
 # Architecture deep dive
-<!-- docs-synced-commit: 9b101354d030e24b0762c736a2c1480afe393260 -->
+<!-- docs-synced-commit: 045add335bd218d317739d2420bb9c8d9443ea9d -->
 
 Reference notes for tasks that touch data fetching, cache invalidation, or the
 cheat-sheet render path. CLAUDE.md states the contracts; this file shows the
@@ -103,15 +103,18 @@ index it — there is no longer an `id` field on `Map`/`Agent` rows.
 1. RSC ([add/page.tsx](app/(protected)/add/page.tsx),
    [lineup/[id]/page.tsx](app/(protected)/lineup/[id]/page.tsx)) loads
    reference data; edit additionally loads the row + signs its image URLs.
-2. `<LineupForm>` (client) holds new images as `{ file, previewUrl }` and
-   existing images as `{ existingPath, previewUrl, label }`. Map and agent
-   are tracked as slugs (`mapSlug`/`agentSlug`).
+2. `<LineupForm>` (client) holds new images as `{ id, file, previewUrl }` and
+   existing images as `{ id, existingPath, previewUrl, label }`. `id` is stable
+   for drag-and-drop sorting: `crypto.randomUUID()` for new files, storage path
+   for existing images. Map and agent are tracked as slugs (`mapSlug`/`agentSlug`).
 3. On submit:
    - `POST /api/images/sign-upload` with `{ count }` of new files; server
      mints `<uuid>.jpg` paths and returns one `{ path, token, signedUrl }`
      slot per file.
    - Each file is compressed by [lib/image.ts](lib/image.ts) to ≤1920 px JPEG,
      then `getBrowserSupabase().storage.from("lineups").uploadToSignedUrl(...)`.
+     Compression + upload runs concurrently across all new files via
+     `Promise.all`; one failed upload rejects the whole save.
    - Final `images` array merges existing paths and uploaded paths preserving
      UI order.
    - `POST /api/lineups` (create) or `PATCH /api/lineups/[id]` (edit) persists
@@ -125,6 +128,28 @@ index it — there is no longer an `id` field on `Map`/`Agent` rows.
 The SWR invalidation has to happen even on PATCH where map/agent didn't
 change, because the cards on the cheat sheet may now have different
 `custom_fields` / images.
+
+## Custom field delete flow
+
+Field deletion is intentionally destructive: the field definition is removed and
+that key is stripped from every lineup's `custom_fields` JSONB.
+
+Flow:
+
+1. Client asks `GET /api/fields/[id]` for the usage count shown in the confirm
+   dialog. This read scans `lineups.custom_fields` server-side and returns only
+   `{ count }`.
+2. Confirmed deletion calls `DELETE /api/fields/[id]`.
+3. The handler calls `supabase.rpc("delete_field_and_strip", { p_field_id: id })`.
+4. The RPC ([supabase/migrations/0005_delete_field_rpc.sql](supabase/migrations/0005_delete_field_rpc.sql))
+   looks up the key, runs a single `UPDATE lineups SET custom_fields =
+   custom_fields - v_key WHERE custom_fields ? v_key`, then deletes the
+   `field_definitions` row.
+5. Postgres functions are transactional, so any mid-operation failure rolls the
+   key stripping and definition deletion back together.
+
+Do not reintroduce the old row-by-row JavaScript update loop; it could leave
+partially stripped lineups if one write failed mid-delete.
 
 ## Image-zoom pre-hydration script
 
@@ -166,3 +191,5 @@ localStorage and sets the variable on `<html>`. Constraints:
   with a CHECK constraint pinning values to the four legal slot keys. Strips
   the legacy JSONB key from every row and deletes the matching
   `field_definitions` row. No backfill — every row starts with `'{}'`.
+- `supabase/migrations/0005_delete_field_rpc.sql` adds the atomic
+  `delete_field_and_strip(p_field_id uuid)` function used by field deletion.
