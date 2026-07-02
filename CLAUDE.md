@@ -1,5 +1,5 @@
 # CLAUDE.md
-<!-- docs-synced-commit: 9b101354d030e24b0762c736a2c1480afe393260 -->
+<!-- docs-synced-commit: 045add335bd218d317739d2420bb9c8d9443ea9d -->
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -44,14 +44,15 @@ There is no user table. Access is gated by a single shared password in `APP_PASS
 
 1. `POST /api/auth/login` ([app/api/auth/login/route.ts](app/api/auth/login/route.ts)) compares `{ password }` against `APP_PASSWORD` with constant-time compare and, on success, sets an `auth` cookie whose value is `HMAC-SHA256(APP_PASSWORD, AUTH_SECRET)` as hex.
 2. [proxy.ts](proxy.ts) runs on every route except `/login`, `/api/auth/login`, and Next internals/static assets. It recomputes the expected HMAC and compares cookie value in constant time. Failure → 302 to `/login?redirect=<original>`.
-3. Crypto utils live in [lib/auth.ts](lib/auth.ts) and use Web Crypto (`crypto.subtle`) — edge-runtime safe, no `node:crypto`. Don't reach for Node crypto in code that may run at the edge.
-4. To invalidate all sessions, rotate `APP_PASSWORD` or `AUTH_SECRET`.
+3. Protected API route handlers also call `requireAuth(req)` from [lib/auth.ts](lib/auth.ts) as defense in depth. Invalid/missing cookies return `401 { error: "Unauthorized" }` before any DB/storage work.
+4. Crypto utils live in [lib/auth.ts](lib/auth.ts) and use Web Crypto (`crypto.subtle`) — edge-runtime safe, no `node:crypto`. Don't reach for Node crypto in code that may run at the edge.
+5. To invalidate all sessions, rotate `APP_PASSWORD` or `AUTH_SECRET`.
 
 ### Route groups
 
 - `app/(auth)/login/page.tsx` — the only unauthenticated page.
 - `app/(protected)/...` — everything else (`/`, `/add`, `/lineup/[id]`). Group is for organization; the actual gate is in `proxy.ts`.
-- `app/api/...` — route handlers. Same proxy guard applies, so handlers can assume the request is authenticated.
+- `app/api/...` — route handlers. Same proxy guard applies, but protected handlers still call `requireAuth(req)` first so auth does not depend on proxy behavior alone.
 
 ### Supabase clients — strict server/browser split
 
@@ -96,10 +97,12 @@ The cheat sheet's URL is `?map=<slug>&agent=<slug>&side=attack|defense`. Slug is
 
 1. Client compresses with [lib/image.ts](lib/image.ts) → `browser-image-compression`, max 1920px, JPEG ~80%.
 2. Client calls `POST /api/images/sign-upload` with `{ count }` → gets back `{ slots: [{ path, token, signedUrl }] }`. Server mints object keys as `<uuid>.jpg` ([app/api/images/sign-upload/route.ts](app/api/images/sign-upload/route.ts)).
-3. Client uploads each blob via `supabase.storage.from(BUCKET).uploadToSignedUrl(path, token, file)` ([components/lineup-form.tsx](components/lineup-form.tsx)).
+3. Client compresses and uploads all new blobs concurrently with `Promise.all`, each via `supabase.storage.from(BUCKET).uploadToSignedUrl(path, token, file)` ([components/lineup-form.tsx](components/lineup-form.tsx)). If any upload fails, the whole save rejects and the form error UI surfaces it.
 4. Server saves `lineups.images = [{ path, label?, order, zoom_enabled?, zoom_x?, zoom_y?, crop_x?, crop_y?, crop_w?, crop_h? }]` (JSONB, max 5). `zoom_enabled` is an opt-out flag — absent or `true` means the zoom circle + crosshair appear; `false` hides them. `zoom_x` / `zoom_y` are optional 0-100 % deltas for the local-zoom anchor; absence means dead center (50/50). `crop_*` are an optional 0-100 % crop rectangle applied on the cheat-sheet card (all four must be present together — absence means the full image is shown). The edit form clamps the zoom anchor to stay inside the crop rectangle.
 5. On read, [lib/lineups.ts](lib/lineups.ts) `attachSignedUrls()` batches `createSignedUrls(paths, 3600)` for all visible lineups. The `GET /api/lineups` handler does this server-side; the browser never asks for download URLs separately. (`POST /api/images/sign-download` exists but has no callers — treat as dead code, don't build new flows on it.)
 6. On lineup update/delete, [lib/lineups.ts](lib/lineups.ts) `deleteStorageObjects()` strips orphaned objects so storage stays in sync with the DB.
+
+The edit form's DnD state uses stable image IDs: existing images use their storage `path`; newly-added files get `crypto.randomUUID()` at creation time. Do not key sortable image items by signed URL/blob URL — signed URLs rotate and blob URLs are presentation-only.
 
 ### Image-zoom preference (pre-hydration script)
 
@@ -109,7 +112,7 @@ Cheat-sheet image height is user-adjustable via the slider in the filter bar ([c
 
 `field_definitions.key` is the JSONB key inside `lineups.custom_fields` and is **immutable** after creation (label and `input_type` and `sort_order` are editable). Don't add a PATCH path that lets `key` change.
 
-Deleting a `field_definitions` row is a **hard delete**: the handler ([app/api/fields/[id]/route.ts](app/api/fields/[id]/route.ts)) scans every `lineups.custom_fields`, removes the dropped key in JS, writes each row back, then deletes the definitions row. The `GET` on that route returns the usage count for the confirm dialog. This is acceptable because it's a single-user, small-dataset app.
+Deleting a `field_definitions` row is a **hard delete**: the handler ([app/api/fields/[id]/route.ts](app/api/fields/[id]/route.ts)) calls the `delete_field_and_strip(p_field_id uuid)` Postgres RPC from [supabase/migrations/0005_delete_field_rpc.sql](supabase/migrations/0005_delete_field_rpc.sql). The function looks up the field key, strips it from all `lineups.custom_fields` with the `jsonb - text` operator in one `UPDATE`, then deletes the definition row; Postgres rolls the whole function back on failure. The `GET` on that route still returns the usage count for the confirm dialog.
 
 The keys `title` and `stance` are the seeded "primary" custom fields shown most prominently on cheat-sheet cards (see [supabase/seed.sql](supabase/seed.sql)) — anything else is a generic textual extra.
 
@@ -131,6 +134,7 @@ REST-ish convention used throughout `app/api/`. Only `fields` and `lineups` are 
 - `POST /api/{resource}` — create.
 - `PATCH /api/fields` — bulk reorder (`{ order: [{ id, sort_order }, ...] }`).
 - `GET/PATCH/DELETE /api/{resource}/[id]` — read/update/delete one row.
+- Protected handlers call `requireAuth(req)` before parsing params/body or touching Supabase.
 - Maps and agents are sorted alphabetically by `name` in [asset_updater/sync-reference.mjs](asset_updater/sync-reference.mjs) when the JSON is written, so the committed file diffs cleanly.
 
 ### Environment variables
