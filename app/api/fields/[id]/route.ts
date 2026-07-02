@@ -47,38 +47,6 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
 
   return NextResponse.json({ ok: true });
 }
-  const key = row.key as string;
-
-  const { data: all, error: scanErr } = await supabase
-    .from("lineups")
-    .select("id, custom_fields");
-  if (scanErr)
-    return NextResponse.json({ error: scanErr.message }, { status: 500 });
-
-  type Row = { id: string; custom_fields: Record<string, string> };
-  const toUpdate = (all ?? []).filter(
-    (l: Row) => l.custom_fields && key in l.custom_fields,
-  ) as Row[];
-
-  for (const l of toUpdate) {
-    const next = { ...l.custom_fields };
-    delete next[key];
-    const { error } = await supabase
-      .from("lineups")
-      .update({ custom_fields: next })
-      .eq("id", l.id);
-    if (error)
-      return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const { error: delErr } = await supabase
-    .from("field_definitions")
-    .delete()
-    .eq("id", id);
-  if (delErr)
-    return NextResponse.json({ error: delErr.message }, { status: 500 });
-  return NextResponse.json({ ok: true, stripped: toUpdate.length });
-}
 
 // GET usage count for the confirm dialog ("This will permanently remove '<label>' data from all N lineups").
 export async function GET(_req: Request, ctx: RouteCtx) {

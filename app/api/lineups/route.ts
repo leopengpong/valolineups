@@ -64,7 +64,8 @@ export async function POST(req: Request) {
       : {};
   const abilities = normalizeAbilities(b.abilities);
 
-  const supabase = getServerSupabase();  const { data, error } = await supabase
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
     .from("lineups")
     .insert({
       map_slug: mapSlug,

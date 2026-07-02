@@ -188,8 +188,8 @@ export function ImageInput({
       const cw = cur.cropW ?? DEFAULT_CROP.w;
       const ch = cur.cropH ?? DEFAULT_CROP.h;
       const clamp = (n: number, lo: number, hi: number) => n < lo ? lo : n > hi ? hi : n;
-      let zx = clamp(cur.zoomX ?? 50, cx, cx + cw);
-      let zy = clamp(cur.zoomY ?? 50, cy, cy + ch);
+      const zx = clamp(cur.zoomX ?? 50, cx, cx + cw);
+      const zy = clamp(cur.zoomY ?? 50, cy, cy + ch);
       next[idx] = { ...cur, customCrop: true, cropX: cx, cropY: cy, cropW: cw, cropH: ch, zoomX: zx, zoomY: zy };
     } else {
       next[idx] = { ...cur, customCrop: false };
