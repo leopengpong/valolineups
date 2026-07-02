@@ -586,7 +586,7 @@ type ParsedLineupNotes = {
 function parseLineupNotes(notes?: string): ParsedLineupNotes {
   if (!notes) return { steps: [] };
   let text = notes.trim();
-  const routeMatch = text.match(/^From\s+(.+?)\s+to\s+(.+?)\.\s*/is);
+  const routeMatch = text.match(/^From\s+([\s\S]+?)\s+to\s+([\s\S]+?)\.\s*/i);
   const route = routeMatch
     ? { from: routeMatch[1].trim(), to: routeMatch[2].trim() }
     : undefined;
