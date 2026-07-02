@@ -33,6 +33,13 @@ const AGENT_BY_SLUG = new Map<string, Agent>(
 const LABEL_TEXT_SHADOW =
   "0 0 4px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.95)";
 
+type OpenLineupImage = {
+  src: string;
+  alt?: string;
+  intro?: string;
+  steps: Array<{ number: number; text: string }>;
+};
+
 export function LineupCard({
   lineup,
   fields,
@@ -40,7 +47,7 @@ export function LineupCard({
   lineup: LineupWithUrls;
   fields: FieldDefinition[];
 }) {
-  const [openUrl, setOpenUrl] = useState<string | null>(null);
+  const [openImage, setOpenImage] = useState<OpenLineupImage | null>(null);
   const toast = useToast();
   const { abilities, title, stance, secondary, notes } = splitSummary(
     lineup.custom_fields,
@@ -71,7 +78,7 @@ export function LineupCard({
 
   return (
     <>
-      <div className="group flex min-w-[280px] max-w-full flex-col rounded-lg border border-border bg-card p-3">
+      <div className="group flex min-w-[280px] max-w-full flex-col rounded-xl border border-border/80 bg-card/95 p-3 shadow-lg shadow-black/25 ring-1 ring-white/[0.03] transition-colors hover:border-primary/35">
         <div className="pl-1 pb-2 pt-1">
           {isEmpty ? (
             <div className="flex items-start justify-between gap-2">
@@ -169,22 +176,20 @@ export function LineupCard({
             </div>
           )}
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-0.5">
-          {lineup.images.map((img, i) => (
-            <LineupImageItem
-              key={`${img.path}-${i}`}
-              image={img}
-              index={i}
-              onOpenFullscreen={setOpenUrl}
-            />
-          ))}
-        </div>
-        {parsedNotes.steps.length > 0 && (
-          <LineupSteps intro={parsedNotes.intro} steps={parsedNotes.steps} />
-        )}
+        <LineupMediaStrip
+          images={lineup.images}
+          intro={parsedNotes.intro}
+          steps={parsedNotes.steps}
+          onOpenImage={setOpenImage}
+        />
       </div>
-      {openUrl && (
-        <ImageOverlay src={openUrl} onClose={() => setOpenUrl(null)} />
+      {openImage && (
+        <ImageOverlay
+          src={openImage.src}
+          alt={openImage.alt}
+          caption={<ExpandedImageCaption image={openImage} />}
+          onClose={() => setOpenImage(null)}
+        />
       )}
     </>
   );
@@ -232,22 +237,144 @@ function CardActions({
   );
 }
 
-function LineupSteps({ intro, steps }: { intro?: string; steps: string[] }) {
+function ExpandedImageCaption({ image }: { image: OpenLineupImage }) {
+  if (!image.intro && image.steps.length === 0) return null;
   return (
-    <div className="mt-3 rounded-md border border-border/60 bg-background/35 px-3 py-2 text-sm text-muted-foreground">
-      {intro && <p className="mb-1.5 text-xs text-muted-foreground/85">{intro}</p>}
-      <ol className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
-        {steps.map((step, i) => (
-          <li key={i} className="flex gap-2 leading-snug">
-            <span className="mt-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
-              {i + 1}
-            </span>
-            <span>{step}</span>
-          </li>
-        ))}
-      </ol>
+    <div>
+      {image.intro && <p className="mb-2 text-white/75">{image.intro}</p>}
+      {image.steps.length > 0 && (
+        <ol className="space-y-1">
+          {image.steps.map((step) => (
+            <li key={step.number} className="flex gap-2 leading-snug">
+              <span className="mt-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/15 text-[10px] font-semibold text-white">
+                {step.number}
+              </span>
+              <span>{step.text}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
+}
+
+type LineupMediaGroup = {
+  image: LineupImage & { url: string };
+  imageIndex: number;
+  steps: Array<{ number: number; text: string }>;
+};
+
+function LineupMediaStrip({
+  images,
+  intro,
+  steps,
+  onOpenImage,
+}: {
+  images: Array<LineupImage & { url: string }>;
+  intro?: string;
+  steps: string[];
+  onOpenImage: (image: OpenLineupImage) => void;
+}) {
+  const groups = groupStepsWithImages(images, steps);
+  return (
+    <div className="flex max-w-full gap-3 overflow-x-auto pb-0.5">
+      {groups.map((group) => (
+        <LineupMediaItem
+          key={`${group.image.path}-${group.imageIndex}`}
+          group={group}
+          intro={group.imageIndex === 0 ? intro : undefined}
+          onOpenImage={onOpenImage}
+        />
+      ))}
+    </div>
+  );
+}
+
+function LineupMediaItem({
+  group,
+  intro,
+  onOpenImage,
+}: {
+  group: LineupMediaGroup;
+  intro?: string;
+  onOpenImage: (image: OpenLineupImage) => void;
+}) {
+  const [mediaWidth, setMediaWidth] = useState<number | null>(null);
+  return (
+    <div className="flex shrink-0 flex-col gap-2">
+      <LineupImageItem
+        image={group.image}
+        index={group.imageIndex}
+        onSizeChange={setMediaWidth}
+        onOpenFullscreen={(src) =>
+          onOpenImage({
+            src,
+            alt: group.image.label || `Lineup image ${group.imageIndex + 1}`,
+            intro,
+            steps: group.steps,
+          })
+        }
+      />
+      {(intro || group.steps.length > 0) && (
+        <div
+          className="rounded-md border border-border/60 bg-background/35 px-2.5 py-2 text-xs text-muted-foreground"
+          style={mediaWidth ? { width: mediaWidth } : undefined}
+        >
+          {intro && <p className="mb-1.5 text-muted-foreground/85">{intro}</p>}
+          {group.steps.length > 0 && (
+            <ol className="space-y-1">
+              {group.steps.map((step) => (
+                <li key={step.number} className="flex gap-1.5 leading-snug">
+                  <span className="mt-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
+                    {step.number}
+                  </span>
+                  <span>{step.text}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function groupStepsWithImages(
+  images: Array<LineupImage & { url: string }>,
+  steps: string[],
+): LineupMediaGroup[] {
+  const hasImageText = images.some((image) => image.text?.trim());
+  if (hasImageText) {
+    let stepNumber = 1;
+    return images.map((image, imageIndex) => {
+      const assigned = splitImageText(image.text).map((text) => ({
+        number: stepNumber++,
+        text,
+      }));
+      return { image, imageIndex, steps: assigned };
+    });
+  }
+
+  return images.map((image, imageIndex) => {
+    const imageCount = images.length;
+    const assigned = steps
+      .map((text, stepIndex) => ({ number: stepIndex + 1, text }))
+      .filter((_step, stepIndex) => {
+        if (imageCount === 0) return false;
+        if (stepIndex < imageCount - 1) return stepIndex === imageIndex;
+        return imageIndex === imageCount - 1;
+      });
+    return { image, imageIndex, steps: assigned };
+  });
+}
+
+function splitImageText(text?: string): string[] {
+  if (!text) return [];
+  return text
+    .replace(/\s+(\d+\.\s+)/g, "\n$1")
+    .split(/\n+/)
+    .map((line) => line.trim().replace(/^\d+[.)]\s*/, ""))
+    .filter(Boolean);
 }
 
 // Per-image local-zoom anchor: stored as 0-100 % deltas on the image
@@ -257,10 +384,12 @@ const ZOOM_FACTOR = 2.5;
 function LineupImageItem({
   image,
   index,
+  onSizeChange,
   onOpenFullscreen,
 }: {
   image: LineupImage & { url: string };
   index: number;
+  onSizeChange?: (width: number) => void;
   onOpenFullscreen: (url: string) => void;
 }) {
   const bulkPin = useAllLocalZoom();
@@ -322,13 +451,16 @@ function LineupImageItem({
       const w = el.clientWidth;
       const h = el.clientHeight;
       const r = Math.max(28, Math.min(110, h * 0.3));
-      if (w > 0 && h > 0) setFigDims({ w, h, r });
+      if (w > 0 && h > 0) {
+        setFigDims({ w, h, r });
+        onSizeChange?.(w);
+      }
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [onSizeChange]);
 
   const connector = (() => {
     if (!figDims || !showZoom) return null;

@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 export function ImageOverlay({
   src,
   alt,
+  caption,
   onClose,
 }: {
   src: string;
   alt?: string;
+  caption?: ReactNode;
   onClose: () => void;
 }) {
   const [errored, setErrored] = useState(false);
@@ -56,15 +58,24 @@ export function ImageOverlay({
           </button>
         </div>
       ) : (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          key={retrySeed}
-          src={imgSrc}
-          alt={alt ?? ""}
-          className="max-h-full max-w-full rounded shadow-2xl"
+        <div
+          className="flex max-h-full max-w-full flex-col gap-3"
           onClick={(e) => e.stopPropagation()}
-          onError={() => setErrored(true)}
-        />
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={retrySeed}
+            src={imgSrc}
+            alt={alt ?? ""}
+            className="min-h-0 max-h-[calc(100vh-8rem)] max-w-full rounded object-contain shadow-2xl"
+            onError={() => setErrored(true)}
+          />
+          {caption && (
+            <div className="max-h-28 overflow-auto rounded-lg border border-white/10 bg-black/55 p-3 text-sm text-white/85">
+              {caption}
+            </div>
+          )}
+        </div>
       )}
       <button
         type="button"

@@ -5,6 +5,8 @@ export type Side = "attack" | "defense";
 export type LineupImage = {
   path: string; // Supabase Storage object key
   label?: string;
+  // Instruction text associated with this image on the cheat sheet.
+  text?: string;
   order: number;
   // When false, no zoom circle or crosshair appears for this image.
   // Absent means true (backwards compat with pre-existing data).

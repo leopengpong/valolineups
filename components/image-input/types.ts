@@ -6,6 +6,7 @@ export type ImageItem = {
   previewUrl: string;
   existingPath?: string;
   label?: string;
+  text?: string;
   zoomEnabled?: boolean;
   zoomX?: number;
   zoomY?: number;
