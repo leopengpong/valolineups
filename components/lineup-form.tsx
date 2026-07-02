@@ -59,6 +59,7 @@ function serializeImage(img: ImageItem) {
     ep: img.existingPath ?? null,
     nf: Boolean(img.file),
     l: img.label ?? "",
+    t: img.text ?? "",
     ze: img.zoomEnabled ?? true,
     zx: img.zoomX ?? 50,
     zy: img.zoomY ?? 50,
@@ -226,6 +227,7 @@ export function LineupForm({
     Array<{
       path: string;
       label?: string;
+      text?: string;
       order: number;
       zoom_enabled?: boolean;
       zoom_x?: number;
@@ -274,6 +276,7 @@ export function LineupForm({
       const out: {
         path: string;
         label?: string;
+        text?: string;
         order: number;
         zoom_enabled?: boolean;
         zoom_x?: number;
@@ -285,6 +288,7 @@ export function LineupForm({
       } = {
         path: img.existingPath ?? uploadedByIndex.get(i)!,
         label: img.label?.trim() || undefined,
+        text: img.text?.trim() || undefined,
         order: i,
       };
       if (img.zoomEnabled === false) {

@@ -19,6 +19,7 @@ import {
 import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -135,6 +136,12 @@ export function ImageInput({
   function setLabel(idx: number, label: string) {
     const next = value.slice();
     next[idx] = { ...next[idx], label };
+    onChange(next);
+  }
+
+  function setText(idx: number, text: string) {
+    const next = value.slice();
+    next[idx] = { ...next[idx], text };
     onChange(next);
   }
 
@@ -297,6 +304,13 @@ export function ImageInput({
                           className="h-7"
                         />
                       </div>
+                      <Textarea
+                        value={item.text ?? ""}
+                        onChange={(e) => setText(i, e.target.value)}
+                        placeholder="Text shown under this image"
+                        rows={3}
+                        className="text-sm"
+                      />
                       <div className="flex flex-col gap-1">
                         <Tooltip>
                           <TooltipTrigger

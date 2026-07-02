@@ -83,6 +83,7 @@ export function normalizeImages(images: unknown): LineupImage[] {
       const out: LineupImage = {
         path: img.path,
         label: typeof img.label === "string" ? img.label : undefined,
+        text: typeof (img as { text?: unknown }).text === "string" ? (img as { text: string }).text : undefined,
         order: typeof img.order === "number" ? img.order : i,
       };
       const ze = (img as { zoom_enabled?: unknown }).zoom_enabled;
